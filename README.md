@@ -25,7 +25,7 @@ The following goals need to be met:
 
 # Implementation
 
-Implementation can be found at https://github.com/reactive-streams/reactive-streams-jvm/blob/v1.0.1/README.md
+Implementation can be found at https://github.com/reactive-streams/reactive-streams-jvm/blob/v1.0.1/README.md.
 
 # License
 
