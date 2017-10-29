@@ -23,6 +23,10 @@ The following goals need to be met:
 - Distributed Actors and registries
 - A cluster system
 
+# Implementation
+
+Implementation can be found at https://github.com/reactive-streams/reactive-streams-jvm/blob/v1.0.1/README.md
+
 # License
 
 Copyright 2017- Andrew Evans and SimplrInsites, LLC
