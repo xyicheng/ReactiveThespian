@@ -8,13 +8,14 @@ Created on Oct 29, 2017
 '''
 
 from atomos.atomic import AtomicInteger
+import logging
 from reactive.actor.base_actor import BaseActor
-from reactive.actor.routee import ActorRoutee
 from reactive.message.router_messages import Subscribe, DeSubscribe, Broadcast,\
-    GetNumRoutees
+    GetNumRoutees, RouteAsk, RouteTell
 from reactive.error.handler import handle_actor_system_fail,\
     format_send_receive_error, format_message_error
 from reactive.message.base_message import Message
+from random import Random
 
 
 class PubSub(BaseActor):
@@ -30,6 +31,15 @@ class PubSub(BaseActor):
         self.__actor_set = []
         self.num_actors = AtomicInteger(0)
         self.__index = 0
+
+    def get_actor_set(self):
+        """
+        Get the current actor set.
+
+        :return: The actor set
+        :rtype: list()
+        """
+        return self.__actor_set
 
     def on_subscribe(self, actor):
         """
@@ -102,7 +112,7 @@ class PubSub(BaseActor):
                 payload = msg.payload()
                 if payload and isinstance(payload, Message):
                     for actor in self.__actor_set:
-                        self.sys.tell(actor, payload)
+                        self.send(actor, msg)
                 else:
                     err_msg = "Broadcast Requires Message Payload"
                     err_msg = format_send_receive_error(err_msg, sender, self)
@@ -134,6 +144,20 @@ class PubSub(BaseActor):
         if msg.sender is None:
             msg.sender = sender
 
+    def handle_message(self, msg, sender):
+        """
+        Handle a tell request.
+
+        :param msg: The message to handle
+        :type msg: Message
+        :param sender: The sender
+        :type sender: BaseActor
+        """
+        actor = Random().choice(self.__actor_set)
+        if msg.sender is None:
+            msg.sender = sender
+        self.send(actor, msg)
+
     def receiveMessage(self, msg, sender):
         """
         Handle the incoming messages
@@ -147,6 +171,8 @@ class PubSub(BaseActor):
             self.check_message_and_sender(msg, sender)
             if isinstance(msg, Subscribe):
                 self.handle_subscription(msg, sender)
+            elif isinstance(msg, RouteAsk) or isinstance(msg, RouteTell):
+                self.handle_message(msg, sender)
             elif isinstance(msg, DeSubscribe):
                 self.handle_desubscribe(msg, sender)
             elif isinstance(msg, Broadcast):

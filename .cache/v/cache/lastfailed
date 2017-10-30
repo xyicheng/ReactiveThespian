@@ -1,4 +1,5 @@
 {
   "test/test_actors_reactive.py::TestActorSystem::()::test_ask": true,
-  "test/test_actors_reactive.py::TestActorSystem::()::test_tell": true
+  "test/test_actors_reactive.py::TestActorSystem::()::test_tell": true,
+  "test/test_round_robin.py::TestPubSub::()::test_ask_routee": true
 }

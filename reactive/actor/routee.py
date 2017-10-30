@@ -40,30 +40,20 @@ class ActorRoutee(BaseActor):
         """
         try:
             if isinstance(msg, RouteAsk):
-                # block on receive and send return value back
+                sender = msg.sender
                 msg = msg.payload
-                if msg.sender:
+                if sender:
                     val = self.on_receive(msg, sender)
                     self.send(sender, val)
+                elif msg.sender:
+                    val = self.on_receive(msg, msg.sender)
+                    self.send(msg.sender, val)
             elif isinstance(msg, RouteTell):
                 self.on_receive(msg, msg.sender)
-            elif isinstance(msg, BalancingTell):
-                router = msg.router
+            elif isinstance(msg, Broadcast):
                 payload = msg.payload
-                msg = payload.msg
-                sender = payload.sender
-                self.set_on_receive(msg, sender)
-                self.send(router, RouteTell(self.myAddress, router, self.myAddress))
-            elif isinstance(msg, BalancingAsk):
-                router = msg.router
-                payload = msg.payload
-                msg = payload.msg
-                sender = payload.sender
-                val  = self.set_on_receive(msg, sender)
-                self.send(sender, val)
-                self.send(router, RouteTell(self.myAddress, router, self.myAddress))
-            elif isinstance(msg, RouteTell) or isinstance(msg, Broadcast):
-                msg = msg.payload
-                self.on_receive(msg, sender)
-        except:
+                sender = msg.sender
+                self.on_receive(payload, sender)
+        except Exception as e:
             handle_actor_system_fail()
+            raise e

@@ -9,11 +9,15 @@ from thespian.actors import ActorSystem
 from reactive.routers.pub_sub import PubSub
 from reactive.actor.routee import ActorRoutee
 from reactive.message.router_messages import Subscribe, GetNumRoutees,\
-    DeSubscribe, Broadcast
+    DeSubscribe, Broadcast, RouteAsk
 from reactive.message.base_message import Message
 
 
 class RouteeAdd(Message):
+    pass
+
+
+class RouteeAddResponse(Message):
     pass
 
 
@@ -22,19 +26,22 @@ class PubTestRoutee(ActorRoutee):
     def __init__(self):
         super().__init__()
 
-    def receiveMessage(self, msg, sender):
+    def on_receive(self, msg, sender):
         super().receiveMessage(msg, sender)
-        if isinstance(RouteeAdd):
+        if isinstance(msg, RouteeAdd):
             payload = msg.payload
             payload += 1
-            self.send(sender, payload)
+            add_resp = RouteeAddResponse(payload, sender, self)
+            return add_resp
 
 
 @pytest.fixture(scope="module")
 def asys():
-    asys = ActorSystem("multiprocQueueBase")
+    #asys = ActorSystem("multiprocQueueBase")
+    asys = ActorSystem()
     yield asys
     asys.shutdown()
+
 
 class TestPubSub():
 
@@ -84,5 +91,6 @@ class TestPubSub():
         subb = Subscribe(routeeb, psub, None)
         asys.tell(psub, subb)
         radd = RouteeAdd(1, psub, None)
-        res_val = asys.ask(psub, radd)
-        assert res_val == 2
+        rask = RouteAsk(radd, psub, None)
+        res_val = asys.ask(psub, rask)
+        assert res_val.payload == 2
