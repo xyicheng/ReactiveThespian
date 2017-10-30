@@ -89,7 +89,15 @@ class PubSub(BaseActor):
         except:
             handle_actor_system_fail()
 
-    def handle_message(self, msg, sender):
+    def handle_broadcast(self, msg, sender):
+        """
+        Handle a message.
+
+        :param msg: Message to support
+        :type msg: Message()
+        :param sender: The sender to build
+        :type sender: Actor()
+        """
         try:
             if isinstance(msg, Broadcast):
                 payload = msg.payload()
@@ -103,13 +111,30 @@ class PubSub(BaseActor):
         except:
             handle_actor_system_fail()
 
+    def handle_unexpected_message(self, msg, sender):
+        """
+        Handle any unexpected messages.
+
+        :param msg: The message to handle
+        :type msg: Message()
+        :param sender: The sender
+        :type sender: BaseActor()
+        """
+        err_msg = "Unexpected Message in {}.\nType={}\nSender={}"
+        err_msg = err_msg.format(str(self), str(type(msg)), str(sender))
+
     def receiveMessage(self, msg, sender):
         """
         Handle the incoming messages
         """
-        if isinstance(msg, Subscribe):
-            self.handle_subscription(msg, sender)
-        elif isinstance(msg, DeSubscribe):
-            self.handle_desubscribe(msg, sender)
-        else:
-            self.handle_message(msg, sender)
+        try:
+            if isinstance(msg, Subscribe):
+                self.handle_subscription(msg, sender)
+            elif isinstance(msg, DeSubscribe):
+                self.handle_desubscribe(msg, sender)
+            elif isinstance(msg, Broadcast):
+                self.handle_broadcast(msg, sender)
+            else:
+                self.handle_unexpected_message(msg, sender)
+        except:
+            handle_actor_system_fail()
