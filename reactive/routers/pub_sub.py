@@ -10,7 +10,8 @@ Created on Oct 29, 2017
 from atomos.atomic import AtomicInteger
 from reactive.actor.base_actor import BaseActor
 from reactive.actor.routee import ActorRoutee
-from reactive.message.router_messages import Subscribe, DeSubscribe, Broadcast
+from reactive.message.router_messages import Subscribe, DeSubscribe, Broadcast,\
+    GetNumRoutees
 from reactive.error.handler import handle_actor_system_fail,\
     format_send_receive_error, format_message_error
 from reactive.message.base_message import Message
@@ -34,19 +35,17 @@ class PubSub(BaseActor):
         """
         Subscribe to the pub/sub
         """
-        if actor not in self.actor_set:
-            self.actor_set.append(actor)
-            self.num_actors.get_and_add(1)
+        if actor not in self.__actor_set:
+            self.__actor_set.append(actor)
+            self.num_actors.set(len(self.__actor_set))
 
     def de_subscribe(self, actor):
         """
         De-subscribe an actor
         """
-        if actor in self.actor_set:
-            self.actor_set.remove(actor)
-            self.num_actors.get_and_add(1)
-            if self.__index >= len(self.__actor_set):
-                self.__index = 0
+        if actor in self.__actor_set:
+            self.__actor_set.remove(actor)
+            self.num_actors.set(len(self.__actor_set))
 
     def handle_subscription(self, msg, sender):
         """
@@ -60,15 +59,16 @@ class PubSub(BaseActor):
         try:
             if isinstance(msg, Subscribe):
                 payload = msg.payload
-                if payload and isinstance(payload, ActorRoutee):
-                    self.on_subscribe(payload)
-                elif payload and isinstance(payload, BaseActor):
-                    routee = self.createActor(ActorRoutee)
-                    routee.on_receive = payload.receiveMessage
-                else:
-                    err_msg = "Subscribe Requires Base Actor Payload"
-                    err_msg = format_send_receive_error(err_msg, sender, self)
-                    raise ValueError(err_msg)
+                self.on_subscribe(payload)
+        except:
+            handle_actor_system_fail()
+
+    def handle_get_num_actors(self, msg, sender):
+        """
+        Get the number of actors in the router
+        """
+        try:
+            self.send(sender, len(self.__actor_set))
         except:
             handle_actor_system_fail()
 
@@ -84,12 +84,7 @@ class PubSub(BaseActor):
         try:
             if isinstance(msg, DeSubscribe):
                 payload = msg.payload
-                if payload and isinstance(payload, ActorRoutee):
-                    self.de_subscribe(payload)
-                else:
-                    err_msg = "DeSubscribe Requires Base ActorRoutee Payload"
-                    err_msg = format_send_receive_error(err_msg, sender, self)
-                    raise ValueError(err_msg)
+                self.de_subscribe(payload)
         except:
             handle_actor_system_fail()
 
@@ -143,6 +138,11 @@ class PubSub(BaseActor):
     def receiveMessage(self, msg, sender):
         """
         Handle the incoming messages
+
+        :param msg: The incoming message
+        :type msg: Message()
+        :param sender: The sender
+        :type sender: Actor 
         """
         try:
             self.check_message_and_sender(msg, sender)
@@ -152,6 +152,8 @@ class PubSub(BaseActor):
                 self.handle_desubscribe(msg, sender)
             elif isinstance(msg, Broadcast):
                 self.handle_broadcast(msg, sender)
+            elif isinstance(msg, GetNumRoutees):
+                self.handle_get_num_actors(msg, sender)
             else:
                 self.handle_unexpected_message(msg, sender)
         except:

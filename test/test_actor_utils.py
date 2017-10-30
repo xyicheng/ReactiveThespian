@@ -23,6 +23,7 @@ def test_name_generation():
     name = name_creation_utils.get_name()
     assert re.match("\d+\_\d+", name)
 
+
 def test_base_actor_state():
     asys = ActorSystem("multiprocQueueBase")
     base = asys.createActor(UtilTestActor)

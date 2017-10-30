@@ -11,7 +11,6 @@ from reactive.routers.pub_sub import PubSub
 from reactive.error.handler import handle_actor_system_fail
 from reactive.message.router_messages import RouteTell, RouteAsk, Subscribe,\
     DeSubscribe, Broadcast, BalancingAsk, BalancingTell
-from reactive.message.base_message import Message
 
 
 class BalancingRouter(PubSub):

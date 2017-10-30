@@ -38,8 +38,7 @@ class RandomRouter(PubSub):
         :param sender: The sender
         :type sender: BaseActor
         """
-        idx = Random().randint(0, len(self.__actor_set))
-        actor = self.__actor_set[idx]
+        actor = Random().choice(self.__actor_set)
         self.send(actor, msg)
 
     def receiveMessage(self, msg, sender):

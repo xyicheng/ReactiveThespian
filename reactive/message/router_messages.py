@@ -41,3 +41,10 @@ class Subscribe(Message):
 
 class DeSubscribe(Message):
     pass
+
+
+class GetNumRoutees(Message):
+    """
+    Mostly for testing purposes.
+    """
+    pass
