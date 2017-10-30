@@ -10,7 +10,8 @@ from reactive.message.router_messages import RouteTell, RouteAsk, Broadcast,\
     Subscribe, DeSubscribe
 from reactive.routers.PubSub import PubSub
 from reactive.message.base_message import Message
-from reactive.error.handler import handle_actor_system_fail
+from reactive.error.handler import handle_actor_system_fail,\
+    format_message_error
 
 
 class RoundRobinRouter(PubSub):
@@ -75,6 +76,7 @@ class RoundRobinRouter(PubSub):
         :type sender: Actor()
         """
         try:
+            self.check_message_and_sender(msg, sender)
             if isinstance(msg, RouteTell):
                 self.handle_tell(msg, sender)
             elif isinstance(msg, RouteAsk):

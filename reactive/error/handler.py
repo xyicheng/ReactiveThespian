@@ -25,6 +25,6 @@ def format_send_receive_error(msg, sender, receiver):
 
 def format_message_error(msg, expected, actual):
     """
-    Format error message when actual and expectd recepts differ
+    Format error message when actual and expected receipts differ
     """
     return "{}\nExpected={}\nActual={}".format(msg, str(expected), str(actual))

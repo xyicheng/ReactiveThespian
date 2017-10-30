@@ -11,7 +11,7 @@ from reactive.actor.base_actor import BaseActor
 from atomos.atomic import AtomicInteger
 from reactive.message.router_messages import Subscribe, DeSubscribe, Broadcast
 from reactive.error.handler import handle_actor_system_fail,\
-    format_send_receive_error
+    format_send_receive_error, format_message_error
 from reactive.message.base_message import Message
 
 
@@ -123,11 +123,25 @@ class PubSub(BaseActor):
         err_msg = "Unexpected Message in {}.\nType={}\nSender={}"
         err_msg = err_msg.format(str(self), str(type(msg)), str(sender))
 
+    def check_message_and_sender(self, msg, sender):
+        """
+        Ensure that the message and sender exist.
+        """
+        if msg is None or not isinstance(msg, Message):
+                err_msg = format_message_error(Message, str(type(msg)))
+                err_msg = "Messages Differ From Expected in {}\n{}".format(
+                    str(self), err_msg)
+                raise ValueError(err_msg)
+
+        if msg.sender is None:
+            msg.sender = sender
+
     def receiveMessage(self, msg, sender):
         """
         Handle the incoming messages
         """
         try:
+            self.check_message_and_sender(msg, sender)
             if isinstance(msg, Subscribe):
                 self.handle_subscription(msg, sender)
             elif isinstance(msg, DeSubscribe):
