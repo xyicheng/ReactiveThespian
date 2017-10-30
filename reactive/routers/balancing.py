@@ -15,6 +15,12 @@ from reactive.message.base_message import Message
 
 
 class BalancingRouter(PubSub):
+    """
+    Needs work. Attempts to balance tasks/router combination.
+    At the moment, there is an issue where messages must be sent by a caller
+    or routee in order for the queue to be checked. Moving fast so this may
+    need to be reworked.
+    """
 
     def __init__(self):
         """

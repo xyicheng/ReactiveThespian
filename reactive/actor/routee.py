@@ -48,9 +48,18 @@ class ActorRoutee(BaseActor):
                 elif isinstance(msg, BalancingTell):
                     router = msg.router
                     payload = msg.payload
-                    msg
+                    msg = payload.msg
+                    sender = payload.sender
+                    self.set_on_receive(msg, sender)
+                    self.send(router, RouteTell(self.myAddress, router, self.myAddress))
                 elif isinstance(msg, BalancingAsk):
-                    pass
+                    router = msg.router
+                    payload = msg.payload
+                    msg = payload.msg
+                    sender = payload.sender
+                    val  = self.set_on_receive(msg, sender)
+                    self.send(sender, val)
+                    self.send(router, RouteTell(self.myAddress, router, self.myAddress))
                 elif isinstance(msg, RouteTell) or isinstance(msg, Broadcast):
                     msg = msg.payload
                     self.on_receive(msg, sender)
