@@ -17,6 +17,19 @@ class RouteAsk(Message):
         super().__init__(payload, target, sender)
         self.timeout = timeout
 
+class BalancingAsk(RouteAsk):
+
+    def __init__(self, router, msg):
+        super().__init__(msg.payload, msg.target, msg.sender)
+        if isinstance(msg, RouteAsk):
+            super().timeout = msg.timeout
+        self.router = router
+
+class BalancingTell(RouteTell):
+
+    def __init__(self, router, msg):
+        super().__init__(msg.payload, msg.target, msg.sender)
+        self.router = router
 
 class Broadcast(Message):
     pass

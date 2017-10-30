@@ -7,8 +7,9 @@ Created on Oct 29, 2017
 @author: aevans
 '''
 
-from reactive.actor.base_actor import BaseActor
 from atomos.atomic import AtomicInteger
+from reactive.actor.base_actor import BaseActor
+from reactive.actor.routee import ActorRoutee
 from reactive.message.router_messages import Subscribe, DeSubscribe, Broadcast
 from reactive.error.handler import handle_actor_system_fail,\
     format_send_receive_error, format_message_error
@@ -59,8 +60,11 @@ class PubSub(BaseActor):
         try:
             if isinstance(msg, Subscribe):
                 payload = msg.payload
-                if payload and isinstance(payload, BaseActor):
+                if payload and isinstance(payload, ActorRoutee):
                     self.on_subscribe(payload)
+                elif payload and isinstance(payload, BaseActor):
+                    routee = self.createActor(ActorRoutee)
+                    routee.on_receive = payload.receiveMessage
                 else:
                     err_msg = "Subscribe Requires Base Actor Payload"
                     err_msg = format_send_receive_error(err_msg, sender, self)
@@ -80,10 +84,10 @@ class PubSub(BaseActor):
         try:
             if isinstance(msg, DeSubscribe):
                 payload = msg.payload
-                if payload and isinstance(payload, BaseActor):
+                if payload and isinstance(payload, ActorRoutee):
                     self.de_subscribe(payload)
                 else:
-                    err_msg = "DeSubscribe Requires Base Actor Payload"
+                    err_msg = "DeSubscribe Requires Base ActorRoutee Payload"
                     err_msg = format_send_receive_error(err_msg, sender, self)
                     raise ValueError(err_msg)
         except:

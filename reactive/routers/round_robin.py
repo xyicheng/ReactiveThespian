@@ -8,7 +8,7 @@ Created on Oct 29, 2017
 
 from reactive.message.router_messages import RouteTell, RouteAsk, Broadcast,\
     Subscribe, DeSubscribe
-from reactive.routers.PubSub import PubSub
+from reactive.routers.pub_sub import PubSub
 from reactive.message.base_message import Message
 from reactive.error.handler import handle_actor_system_fail,\
     format_message_error
