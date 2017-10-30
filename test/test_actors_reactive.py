@@ -1,4 +1,6 @@
 '''
+Some basics for learning.
+
 Created on Oct 29, 2017
 
 @author: aevans
@@ -63,12 +65,6 @@ class TestActorSystem():
         logging.info("Sending {}".format(str(msg)))
         print(asys.ask(targ, msg))
         asys.shutdown()
-
-    def test_round_robin_router(self):
-        pass
-
-    def test_balancing_router(self):
-        pass
 
 if __name__ == "__main__":
     tc = TestActorSystem()
