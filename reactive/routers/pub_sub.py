@@ -127,11 +127,10 @@ class PubSub(BaseActor):
         Ensure that the message and sender exist.
         """
         if msg is None or not isinstance(msg, Message):
-                err_msg = format_message_error(Message, str(type(msg)))
-                err_msg = "Messages Differ From Expected in {}\n{}".format(
-                    str(self), err_msg)
-                raise ValueError(err_msg)
-
+            err_msg = "Messages Differ From Expected in {}".format(
+                str(self))
+            err_msg = format_message_error(err_msg, Message, msg)
+            raise ValueError(err_msg)
         if msg.sender is None:
             msg.sender = sender
 
