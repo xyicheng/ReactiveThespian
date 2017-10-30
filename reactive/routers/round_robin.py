@@ -1,5 +1,14 @@
 '''
 Round robin router that handles ask and tell messages in round robin fashion.
+Routers are somewhat inefficient in that RouteTell and RouteAsk
+must be used to avoid as much blocking as possible. This will
+improve throughput but add a small dose of complexity.
+
+To ask, call ask to block and wait for a return and use RouteAsk.
+To tell, call tell and use RouteTell. 
+
+This will cause the ActorRoutee actors to performing the correct
+behavior.
 
 Created on Oct 29, 2017
 
@@ -26,9 +35,9 @@ class RoundRobinRouter(PubSub):
         """
         super().__init__()
 
-    def handle_tell(self, msg, sender):
+    def handle_message(self, msg, sender):
         """
-        Handle an incoming tell message
+        Handle an incoming message
 
         :param msg: The message to handle
         :type msg: Message()
@@ -44,27 +53,7 @@ class RoundRobinRouter(PubSub):
                     if self.__index == len(self.__actor_set):
                         self.__index = 0
                     msg = RouteTell(payload, actor, msg.sender)
-                    self.sys.tell(actor, msg)
-
-    def handle_ask(self, msg, sender):
-        """
-        Handle an incoming ask message.
-
-        :param msg: The message to handle
-        :type msg: Message()
-        :param sender: The message sender
-        :type sender: Actor()
-        """
-        if isinstance(msg, RouteAsk):
-            payload = msg.payload
-            if payload and isinstance(payload, Message):
-                if len(self.__actor_set) > 0:
-                    actor = self.__actor_set[self.__index]
-                    self.__index += 1
-                    if self.__index == len(self.__actor_set):
-                        self.__index = 0
-                    msg = RouteAsk(payload, actor, msg.sender, msg.timeout)
-                    self.sys.tell(actor, msg)
+                    self.send(actor, msg)
 
     def receiveMessage(self, msg, sender):
         """
@@ -77,10 +66,8 @@ class RoundRobinRouter(PubSub):
         """
         try:
             self.check_message_and_sender(msg, sender)
-            if isinstance(msg, RouteTell):
-                self.handle_tell(msg, sender)
-            elif isinstance(msg, RouteAsk):
-                self.handle_ask(msg, sender)
+            if isinstance(msg, RouteTell) or isinstance(msg, RouteAsk):
+                self.handle_message(msg, sender)
             elif isinstance(msg, Subscribe):
                 self.handle_subscription(msg, sender)
             elif isinstance(msg, DeSubscribe):

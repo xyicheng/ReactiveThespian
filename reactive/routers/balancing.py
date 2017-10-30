@@ -16,11 +16,28 @@ from reactive.message.base_message import Message
 
 class BalancingRouter(PubSub):
     """
-    Needs work. Attempts to balance tasks/router combination.
+    WARNING: Needs work. Attempts to balance tasks/router combination.
     At the moment, there is an issue where messages must be sent by a caller
     or routee in order for the queue to be checked. Moving fast so this may
     need to be reworked. It would be better to dig into Thespian and find a
     way to replace the typical queue used as a mailbox with a shared mailbox.
+    
+    Balancing router attempts to stick all ActorRoutee actors on the same
+    work queue, emulating some behavior from Akka.
+
+    Routers are somewhat inefficient in that RouteTell and RouteAsk
+    must be used to avoid as much blocking as possible. This will
+    improve throughput but add a small dose of complexity.
+    
+    To ask, call ask to block and wait for a return and use BalancingAsk.
+    To tell, call tell and use BalancingTell. 
+    
+    This will cause the ActorRoutee actors to performing the correct
+    behavior. BalancingTell and BalancingAsk tell the ActorRoutee to send
+    a work request back to the router. Again, not production read, may be removed.
+
+    We are trying to implement as much Akka as possible but the Reactive Streams model
+    really does not require specific routers, only a pub/sub.
     """
 
     def __init__(self):
