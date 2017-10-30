@@ -9,20 +9,17 @@ import sys
 from atomos.atomic import AtomicLong
 
 
-class NameCreator():
+num = AtomicLong(0)
 
-    def __init__(self):
-        self.__num = AtomicLong(0)
 
-    @staticmethod
-    def get_name(self):
-        """
-        Get a randomized name with the actor number.
+def get_name():
+    """
+    Get a randomized name with the actor number.
 
-        :return: The base name
-        :rtype: str()
-        """
-        base = str(self.__num.get_and_add(1))
-        base += "_"
-        base += str(Random().randint(0, sys.maxsize))
-        return base
+    :return: The base name
+    :rtype: str()
+    """
+    base = str(num.get_and_add(1))
+    base += "_"
+    base += str(Random().randint(0, sys.maxsize))
+    return base

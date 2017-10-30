@@ -4,8 +4,8 @@ Created on Oct 29, 2017
 @author: aevans
 '''
 
-import unittest
 import logging
+import pytest
 from thespian.actors import Actor, ActorSystem
 from reactive.message.base_message import Message
 
@@ -13,14 +13,17 @@ from reactive.message.base_message import Message
 class SourceMessage(Message):
     pass
 
+class SourceAsk(Message):
+    pass
 
 class TargetMessage(Message):
     pass
 
 
-class TestSource(Actor):
+class DoTestSource(Actor):
 
     def receiveMessage(self, msg, sender):
+        print(msg)
         if isinstance(msg, TargetMessage):
             msg = "Received Message From {} via {}".format(msg, sender)
             logging.info(msg)
@@ -30,27 +33,36 @@ class TestSource(Actor):
             self.send(msg.target, msg)
 
 
-class TestTarget(Actor):
+class DoTestTarget(Actor):
 
     def receiveMessage(self, message, sender):
         if isinstance(message, SourceMessage):
             self.send(sender, 'Received a Message {}'.format(message.payload))
+        elif isinstance(message, SourceAsk):
+            self.send(sender, "Received {}".format(str(message)))
         else:
-            logging.info("Received {}".format(message))
+            logging.info("Received {}".format(str(message)))
 
 
-class TestActorSystem(unittest.TestCase):
+class TestActorSystem():
 
     def test_tell(self):
-        source = ActorSystem().createActor(TestSource)
-        targ = ActorSystem().createActor(TestTarget)
+        asys = ActorSystem('multiprocQueueBase')
+        source = asys.createActor(DoTestSource)
+        targ = asys.createActor(DoTestTarget)
         msg = SourceMessage("Hello From Source", target=targ, sender=source)
         logging.info("Sending {}".format(str(msg)))
-        ActorSystem().tell(source, msg)
-        ActorSystem().shutdown()
+        asys.tell(targ, msg)
 
     def test_ask(self):
-        pass
+        print("Testing ask")
+        asys = ActorSystem('multiprocQueueBase')
+        source = asys.createActor(DoTestSource)
+        targ = asys.createActor(DoTestTarget)
+        msg = SourceAsk("Hello From Source", target=targ, sender=source)
+        logging.info("Sending {}".format(str(msg)))
+        print(asys.ask(targ, msg))
+        asys.shutdown()
 
     def test_round_robin_router(self):
         pass
@@ -58,6 +70,6 @@ class TestActorSystem(unittest.TestCase):
     def test_balancing_router(self):
         pass
 
-
 if __name__ == "__main__":
-    unittest.main()
+    tc = TestActorSystem()
+    tc.test_ask()
