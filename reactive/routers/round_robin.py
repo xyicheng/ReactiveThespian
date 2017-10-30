@@ -46,15 +46,14 @@ class RoundRobinRouter(PubSub):
         """
         payload = msg.payload
         actor_set = self.get_actor_set()
-        print(self)
-        print(payload)
         if payload and isinstance(payload, Message):
             if len(actor_set) > 0:
                 actor = actor_set[self.__index]
                 self.__index += 1
                 if self.__index == len(actor_set):
                     self.__index = 0
-                msg = RouteTell(payload, actor, msg.sender)
+                if msg.sender is None:
+                    msg.sender = sender
                 self.send(actor, msg)
 
     def receiveMessage(self, msg, sender):

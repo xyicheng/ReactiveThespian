@@ -56,4 +56,3 @@ class ActorRoutee(BaseActor):
                 self.on_receive(payload, sender)
         except Exception as e:
             handle_actor_system_fail()
-            raise e
