@@ -19,7 +19,8 @@ class BalancingRouter(PubSub):
     Needs work. Attempts to balance tasks/router combination.
     At the moment, there is an issue where messages must be sent by a caller
     or routee in order for the queue to be checked. Moving fast so this may
-    need to be reworked.
+    need to be reworked. It would be better to dig into Thespian and find a
+    way to replace the typical queue used as a mailbox with a shared mailbox.
     """
 
     def __init__(self):
