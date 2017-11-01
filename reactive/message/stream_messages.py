@@ -17,3 +17,7 @@ class Push(Message):
 
 class Complete(Message):
     pass
+
+
+class Cancel(Message):
+    pass
