@@ -117,6 +117,12 @@ class Subscription(BaseActor):
         """
         logging.info("Actor Completing {}".format(str(self)))
 
+    def on_push(self):
+        """
+        Handle a push to this subscription from a publisher.
+        """
+        pass
+
     def receiveMessage(self, msg, sender):
         """
         Handle a message on receipt. The message sender is used to

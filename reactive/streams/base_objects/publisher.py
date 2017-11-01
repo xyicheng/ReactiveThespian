@@ -27,8 +27,9 @@ class Publisher(BaseActor):
         :type router: PubSub
         """
         self.__routing_logic = routing_logic
+        self.__subscription = []
 
-    def subscribe(self, subscriber):
+    def subscribe(self, subscription):
         """
         Subscribe a routee
 
@@ -36,8 +37,8 @@ class Publisher(BaseActor):
         :type routee: BaseActor
         """
         try:
-            sub = Subscribe(routee, self)
-            self.send(sub, self)
+            if subscription not in self.__subscriptions:
+                self.__subscriptions.append(subscription)
         except Exception:
             handle_actor_system_fail()
 
