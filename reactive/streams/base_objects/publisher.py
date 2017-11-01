@@ -19,7 +19,7 @@ class Publisher(BaseActor):
     Publisher. Publishes messages to subscribers.
     """
 
-    def __init__(self, routing_logic=RouterType.BROADCAST):
+    def __init__(self, routing_logic=RouterType.BROADCAST, subscription_pool=RoundRobinSubscriptionPool()):
         """
         Constructor
 
