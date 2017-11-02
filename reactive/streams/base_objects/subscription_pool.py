@@ -7,11 +7,13 @@ Created on Nov 1, 2017
 @author: aevans
 '''
 
+from queue import Queue
 from reactive.actor.base_actor import BaseActor
 from reactive.message.router_messages import Subscribe, DeSubscribe
-from reactive.message.stream_messages import Cancel
+from reactive.message.stream_messages import Cancel, Pull, Push
 from reactive.streams.base_objects.subscription import Subscription
 from reactive.error.handler import handle_actor_system_fail
+from time import sleep
 
 
 class SubscriptionPool(BaseActor):
@@ -19,12 +21,16 @@ class SubscriptionPool(BaseActor):
     Subscription pool containing subscriptions for an actor.
     """
 
-    def __init__(self):
+    def __init__(self, drop_policy="ignore"):
         """
         Constructor
         """
         super().__init__()
         self.__subscriptions = []
+        self.__empty_batch_wait = 2
+        self.__empty_times = 0
+        self.__result_q = Queue(maxsize=1000)
+        self.__drop_policy = drop_policy 
     
     def subscribe(self, subscription):
         """
@@ -33,14 +39,14 @@ class SubscriptionPool(BaseActor):
         if subscription not in self.__subscriptions:
             self.__subscriptions.append(subscription)
     
-    def next(self):
+    def next(self, msg):
         """
         Implemented by the user. Returns the next object in the result queue.
 
         :return: Returns the next object
         :rtype: object
         """
-        return None
+        pass
 
     def has_subscription(self, subscription):
         """
@@ -68,6 +74,35 @@ class SubscriptionPool(BaseActor):
             self.send(subscription, Cancel)
             self.remove_subscription(subscription)
 
+    def handle_push(self, msg):
+        """
+        Handle a push request to the queue.
+        """
+        batch = msg.payload
+        
+        if isinstance(batch, list):
+            if len(batch) > 0:
+                self.__empty_times = 0
+                for result in batch:
+                    if self.__result_q.full():
+                        if self.__drop_policy == "pop":
+                            try:
+                                self.__result_q.get_nowait()
+                            except Exception:
+                                pass
+                    if self.__result_q.full() is False:
+                        self.__result_q.put_nowait(result)
+            else:
+                self.__empty_times += 1
+                if self.__empty_times >= len(self.__subscriptions): 
+                    twait = self.__empty_batch_wait
+                    sleep(twait)
+                    self.__empty_batch_wait = 0
+                else:
+                    if len(self.__subscriptions) > 0:
+                        twait = self.__empty_batch_wait / len(self.__subscriptions)
+                        sleep(twait)
+
     def receiveMessage(self, msg, sender):
         """
         Handle message on receipt.
@@ -86,6 +121,10 @@ class SubscriptionPool(BaseActor):
                 sub = msg.payload
                 if isinstance(sub, Subscription):
                     self.remove_subscription(sub)
+            elif isinstance(msg, Pull):
+                self.next(msg)
+            elif isinstance(msg, Push):
+                self.handle_push(msg)
             elif isinstance(msg, Cancel):
                 cncl = msg.payload
                 if isinstance(cncl, Subscription):

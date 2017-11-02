@@ -10,8 +10,10 @@ Created on Nov 1, 2017
 
 from reactive.actor.base_actor import BaseActor
 from reactive.error.handler import handle_actor_system_fail
-from reactive.message.router_messages import Subscribe
+from reactive.message.router_messages import Subscribe, DeSubscribe
 from reactive.routers.router_type import RouterType
+from reactive.streams.base_objects.round_robin_subscription_pool import RoundRobinSubscriptionPool
+from reactive.streams.base_objects.subscription import Subscription
 
 
 class Publisher(BaseActor):
@@ -27,18 +29,33 @@ class Publisher(BaseActor):
         :type router: PubSub
         """
         self.__routing_logic = routing_logic
-        self.__subscription = []
+        self.__pool = subscription_pool
 
     def subscribe(self, subscription):
         """
-        Subscribe a routee
+        Subscribe a subscription actor
 
-        :param routee: The routee to use
-        :type routee: BaseActor
+        :param subscription: The subscription to use
+        :type subscription: Subscription
         """
         try:
-            if subscription not in self.__subscriptions:
-                self.__subscriptions.append(subscription)
+            if isinstance(subscription, Subscription):
+                sub = Subscribe(subscription, self.__pool, self)
+                self.send(self.__pool, sub)
+        except Exception:
+            handle_actor_system_fail()
+
+    def desubscribe(self, subscription):
+        """
+        DeSubscribe a subscription actor
+
+        :param subscription: The actor to use
+        :type subscription: Subscription
+        """
+        try:
+            if isinstance(subscription, Subscription):
+                sub = DeSubscribe(subscription, self.__pool, self)
+                self.send(self.__pool, sub)
         except Exception:
             handle_actor_system_fail()
 
@@ -54,7 +71,9 @@ class Publisher(BaseActor):
         try:
             if isinstance(msg, Subscribe):
                 actor = msg.payload
-                if isinstance(actor, BaseActor):
-                    self.subscribe(actor)
+                self.subscribe(actor)
+            elif isinstance(msg, DeSubscribe):
+                actor = msg.payload
+                self.desubscribe(actor)
         except Exception:
             handle_actor_system_fail()
