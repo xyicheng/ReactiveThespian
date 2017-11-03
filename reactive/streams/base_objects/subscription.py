@@ -92,17 +92,12 @@ class Subscription(BaseActor):
         """
         pull_size = 0
         batch = []
-        do_loop = True
-        while do_loop:
-            if self.__result_q.empty() is False:
-                val = self.__result_q.get_nowait()
-                batch.append(val)
-                pull_size += 1
-            else:
-                do_loop = False
+        while pull_size < batch_size and self.__result_q.empty() is False:
+            val = self.__result_q.get_nowait()
+            batch.append(val)
+            pull_size += 1
         msg = Push(batch, sender, self)
         self.send(sender, msg)
-        pull_size = 1000- self.__result_q.qsize()
         if pull_size > 0:
             self.request(pull_size, sender)
             self.handle_next(sender)
