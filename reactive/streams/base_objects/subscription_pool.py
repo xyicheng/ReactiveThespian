@@ -8,12 +8,13 @@ Created on Nov 1, 2017
 '''
 
 from queue import Queue
+from time import sleep
+
 from reactive.actor.base_actor import BaseActor
+from reactive.error.handler import handle_actor_system_fail
 from reactive.message.router_messages import Subscribe, DeSubscribe
 from reactive.message.stream_messages import Cancel, Pull, Push
 from reactive.streams.base_objects.subscription import Subscription
-from reactive.error.handler import handle_actor_system_fail
-from time import sleep
 
 
 class SubscriptionPool(BaseActor):
@@ -21,7 +22,7 @@ class SubscriptionPool(BaseActor):
     Subscription pool containing subscriptions for an actor.
     """
 
-    def __init__(self, drop_policy="ignore"):
+    def __init__(self):
         """
         Constructor
         """
@@ -30,11 +31,28 @@ class SubscriptionPool(BaseActor):
         self.__empty_batch_wait = 2
         self.__empty_times = 0
         self.__result_q = Queue(maxsize=1000)
-        self.__drop_policy = drop_policy 
-    
+        self.__drop_policy ="ignore"
+
+    def set_drop_policy(self, msg, sender):
+        """
+        Set the drop policy
+
+        :param msg: The message with the policy
+        :type msg: Message
+        :param sender: The message Sender
+        :type sender: BaseActor
+        """
+        payload = msg.payload
+        if isinstance(payload, str):
+            if payload in ["pop", "ignore"]:
+                self.__drop_policy = payload
+
     def subscribe(self, subscription):
         """
         Add a subscription to the pool.
+
+        :param subscription: The subscription
+        :type subscription: Subscription
         """
         if subscription not in self.__subscriptions:
             self.__subscriptions.append(subscription)
@@ -131,3 +149,6 @@ class SubscriptionPool(BaseActor):
                     self.cancel(sub)
         except Exception:
             handle_actor_system_fail()
+
+if __name__ == "__main__":
+    pass

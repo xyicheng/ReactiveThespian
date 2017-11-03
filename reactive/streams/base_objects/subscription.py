@@ -13,10 +13,13 @@ Created on Nov 1, 2017
 import logging
 from queue import Queue
 from thespian.actors import ActorExitRequest
+
 from reactive.actor.base_actor import BaseActor
 from reactive.actor.state import ActorState
 from reactive.error.handler import handle_actor_system_fail
-from reactive.message.stream_messages import Pull, Cancel, Push
+from reactive.message.router_messages import Subscribe
+from reactive.message.stream_messages import Pull, Cancel, Push, SetSubscriber,\
+    SetDropPolicy
 
 
 class Subscription(BaseActor):
@@ -24,38 +27,46 @@ class Subscription(BaseActor):
     Subscription router
     """
 
-    def __init__(self, subscriber, drop_policy="ignore"):
+    def __init__(self):
         """
         Constructor
 
         :param subscriber: The subscriber actor
         :type subscriber: BaseActor
-        :param drop_policy: Policy to take if the results queue overfills
+        :param drop_policy: Policy to take if the results queue
         :type drop_policy
         """
         super().__init__()
         self.__result_q = Queue(maxsize=1000)
-        self.__subscriber = subscriber
+        self.__subscriber = None
         self.__subscribed = False
-        self.__drop_policy = drop_policy
-        self.check_setup()
+        self.__drop_policy = "ignore"
 
-    def check_setup(self):
+    def set_drop_policy(self, msg, sender):
         """
-        Check the actor setup.
+        Set the drop policy.
+
+        :param msg: The message containing the policy
+        :type msg: Message
+        :param sender: The sender
         """
-        if self.__subscriber is None or\
-        isinstance(self.__subscriber, BaseActor) is False:
-            err_msg = "Subscription Requires Actor, Received {}"
-            err_msg = err_msg.format(str(self.__subscriber))
-            logging.error(err_msg)
-            raise ValueError(err_msg)
-        if self.__drop_policy is None or\
-        self.__drop_policy not in ["ignore", "pop"]:
-            err_msg = "Drop policy must be pop or ignore in {}"
-            err_msg = err_msg.format(str(self))
-            logging.error(err_msg)
-            raise ValueError(err_msg)
+        payload = msg.payload
+        if isinstance(payload, str):
+            if payload.strip().lower() in ["pop", "ignore"]:
+                self.__drop_policy = payload
+
+    def set_subscriber(self, msg, sender):
+        """
+        Set the subscriber
+
+        :param msg: The message with the subscriber
+        :type msg: Message
+        :param sender: The subscription sender
+        :type sender: BaseActor
+        """
+        payload = msg.payload
+        if isinstance(msg, BaseActor):
+            self.__subscriber = payload
 
     def request(self, batch_size, sender):
         """
@@ -69,12 +80,6 @@ class Subscription(BaseActor):
         rec = self.__subscriber
         msg = Pull(batch_size, self)
         self.send(rec, msg)
-
-    def handle_next(self, sender):
-        """
-        User implemented. Called when a request is made.
-        """
-        None
 
     def on_next(self, batch_size, sender):
         """
@@ -95,11 +100,12 @@ class Subscription(BaseActor):
                 pull_size += 1
             else:
                 do_loop = False
-        if pull_size > 0:
-            msg = Push(pull_size, sender, self)
+        msg = Push(batch, sender, self)
         self.send(sender, msg)
-        self.request(pull_size, sender)
-        self.handle_next(sender)
+        pull_size = 1000- self.__result_q.qsize()
+        if pull_size > 0:
+            self.request(pull_size, sender)
+            self.handle_next(sender)
 
     def cancel(self):
         """
@@ -109,30 +115,22 @@ class Subscription(BaseActor):
         self.send(self, ActorExitRequest())
         self.state = ActorState.TERMINATED
 
-    def handle_subscribe(self):
-        """
-        Created by the user. Called on subscription to a publisher only once.
-        If the subscription is placed in multiple publishers it will not be
-        called again per the reactive streams model.
-        """
-        logging.info("Publisher subscribed {}".format(str(self)))
-
     def on_subscribe(self, msg, sender):
         """
-        Should be called when the subscription is subscribed to a publisher.
-        This method is called at most once.
+        This subscribes to a publisher. Only one publisher is allowed.
+
 
         :param msg: The sending message
         :type msg: Message
         :param sender: The sender
         :type sender: BaseActor
         """
-        if not self.__subscribed:
-            try:
-                self.handle_subscribe()
-            except Exception:
-                handle_actor_system_fail()
-            self.__subscribed = True
+        if self.__subscribed is False:
+            pub = msg.payload
+            if isinstance(pub, BaseActor):
+                Subscribe(self.__subscriber, pub, self)
+                self.send(pub, msg)
+                self.__subscribed = True
 
     def on_complete(self):
         """
@@ -141,16 +139,13 @@ class Subscription(BaseActor):
         failure.
         """
         logging.info("Actor Completing {}".format(str(self)))
-
-    def on_push(self):
-        """
-        Handle a push to this subscription from a publisher.
-        """
-        pass
     
     def handle_batch(self, msg):
         """
         Handle a batch of results.
+
+        :param msg: The message to handle
+        :type msg: Message
         """
         batch = msg.payload
         if isinstance(batch, list):
@@ -181,6 +176,10 @@ class Subscription(BaseActor):
                 self.on_next(batch_size, msg.sender)
             elif isinstance(msg, Push):
                 self.handle_batch(msg)
+            elif isinstance(msg, SetSubscriber):
+                self.set_subscriber(msg, sender)
+            elif isinstance(msg, SetDropPolicy):
+                self.set_drop_policy(msg, sender)
             elif isinstance(msg, Cancel):
                 self.cancel()
         except Exception:

@@ -9,6 +9,7 @@ Created on Oct 29, 2017
 import logging
 import pytest
 from thespian.actors import Actor, ActorSystem
+
 from reactive.message.base_message import Message
 
 

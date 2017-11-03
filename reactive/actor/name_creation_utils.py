@@ -4,9 +4,9 @@ Created on Oct 29, 2017
 @author: aevans
 '''
 
+from atomos.atomic import AtomicLong
 from random import Random
 import sys
-from atomos.atomic import AtomicLong
 
 
 num = AtomicLong(0)

@@ -11,8 +11,6 @@ Created on Nov 1, 2017
 from reactive.actor.base_actor import BaseActor
 from reactive.error.handler import handle_actor_system_fail
 from reactive.message.router_messages import Subscribe, DeSubscribe
-from reactive.routers.router_type import RouterType
-from reactive.streams.base_objects.round_robin_subscription_pool import RoundRobinSubscriptionPool
 from reactive.streams.base_objects.subscription import Subscription
 
 
@@ -21,15 +19,14 @@ class Publisher(BaseActor):
     Publisher. Publishes messages to subscribers.
     """
 
-    def __init__(self, routing_logic=RouterType.BROADCAST, subscription_pool=RoundRobinSubscriptionPool()):
+    def __init__(self):
         """
         Constructor
 
         :param router: The router to use.  All extend PubSub which is default.
         :type router: PubSub
         """
-        self.__routing_logic = routing_logic
-        self.__pool = subscription_pool
+        self.__subscriptions = []
 
     def subscribe(self, subscription):
         """

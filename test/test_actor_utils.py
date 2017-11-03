@@ -6,8 +6,9 @@ Created on Oct 29, 2017
 @author: aevans
 '''
 
-from thespian.actors import ActorSystem
 import re
+from thespian.actors import ActorSystem
+
 from reactive.actor import name_creation_utils
 from reactive.actor.base_actor import BaseActor
 from reactive.actor.state import ActorState

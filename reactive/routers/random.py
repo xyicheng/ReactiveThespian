@@ -15,11 +15,13 @@ Created on Oct 29, 2017
 @author: aevans
 '''
 
-from reactive.routers.pub_sub import PubSub
-from reactive.error.handler import handle_actor_system_fail
-from reactive.message.router_messages import RouteTell, RouteAsk, Subscribe,\
-    DeSubscribe, Broadcast, GetNumRoutees
 from random import Random
+
+from reactive.error.handler import handle_actor_system_fail
+from reactive.message.router_messages import RouteTell, RouteAsk, Subscribe, \
+    DeSubscribe, Broadcast, GetNumRoutees
+from reactive.routers.pub_sub import PubSub
+
 
 class RandomRouter(PubSub):
 

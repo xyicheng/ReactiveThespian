@@ -5,12 +5,13 @@ Created on Oct 29, 2017
 '''
 
 import pytest
-from reactive.message.base_message import Message
-from reactive.actor.routee import ActorRoutee
 from thespian.actors import ActorSystem
-from reactive.routers.random import RandomRouter
-from reactive.message.router_messages import Subscribe, GetNumRoutees,\
+
+from reactive.actor.routee import ActorRoutee
+from reactive.message.base_message import Message
+from reactive.message.router_messages import Subscribe, GetNumRoutees, \
     DeSubscribe, Broadcast, RouteAsk
+from reactive.routers.random import RandomRouter
 
 
 class RouteeAdd(Message):

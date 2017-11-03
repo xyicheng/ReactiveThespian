@@ -7,6 +7,7 @@ Created on Oct 29, 2017
 import logging
 import traceback
 
+
 def handle_actor_system_fail():
     """
     Handle a failure in the actor system.

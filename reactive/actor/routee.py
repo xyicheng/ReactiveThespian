@@ -8,9 +8,9 @@ Created on Oct 29, 2017
 '''
 
 from reactive.actor.base_actor import BaseActor
-from reactive.message.router_messages import RouteAsk, RouteTell, Broadcast,\
-    BalancingAsk, BalancingTell
 from reactive.error.handler import handle_actor_system_fail
+from reactive.message.router_messages import RouteAsk, RouteTell, Broadcast, \
+    BalancingAsk, BalancingTell
 
 
 class ActorRoutee(BaseActor):

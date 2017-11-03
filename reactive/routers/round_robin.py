@@ -15,11 +15,11 @@ Created on Oct 29, 2017
 @author: aevans
 '''
 
-from reactive.message.router_messages import RouteTell, RouteAsk, Broadcast,\
+from reactive.error.handler import handle_actor_system_fail
+from reactive.message.base_message import Message
+from reactive.message.router_messages import RouteTell, RouteAsk, Broadcast, \
     Subscribe, DeSubscribe, GetNumRoutees
 from reactive.routers.pub_sub import PubSub
-from reactive.message.base_message import Message
-from reactive.error.handler import handle_actor_system_fail
 
 
 class RoundRobinRouter(PubSub):

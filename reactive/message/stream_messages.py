@@ -7,6 +7,14 @@ Created on Oct 30, 2017
 from reactive.message.base_message import Message
 
 
+class SetSubscriber(Message):
+    pass
+
+
+class SetDropPolicy(Message):
+    pass
+
+
 class Pull(Message):
     pass
 

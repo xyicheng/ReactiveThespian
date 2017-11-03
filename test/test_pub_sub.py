@@ -6,11 +6,12 @@ Created on Oct 29, 2017
 
 import pytest
 from thespian.actors import ActorSystem
-from reactive.routers.pub_sub import PubSub
+
 from reactive.actor.routee import ActorRoutee
-from reactive.message.router_messages import Subscribe, GetNumRoutees,\
-    DeSubscribe, Broadcast, RouteAsk
 from reactive.message.base_message import Message
+from reactive.message.router_messages import Subscribe, GetNumRoutees, \
+    DeSubscribe, Broadcast, RouteAsk
+from reactive.routers.pub_sub import PubSub
 
 
 class RouteeAdd(Message):

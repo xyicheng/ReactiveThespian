@@ -4,7 +4,9 @@ Created on Oct 29, 2017
 @author: aevans
 '''
 from thespian.actors import Actor
+
 from reactive.actor.state import ActorState
+
 
 class BaseActor(Actor):
     
