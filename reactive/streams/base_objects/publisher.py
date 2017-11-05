@@ -12,6 +12,7 @@ from reactive.actor.base_actor import BaseActor
 from reactive.error.handler import handle_actor_system_fail
 from reactive.message.router_messages import Subscribe, DeSubscribe
 from reactive.streams.base_objects.subscription import Subscription
+from reactive.message.stream_messages import SetPublisher, SetDropPolicy
 
 
 class Publisher(BaseActor):
@@ -27,6 +28,8 @@ class Publisher(BaseActor):
         :type router: PubSub
         """
         self.__subscriptions = []
+        self.__publisher = None
+        self.drop_policy = "ignore"
 
     def subscribe(self, subscription):
         """
@@ -56,6 +59,27 @@ class Publisher(BaseActor):
         except Exception:
             handle_actor_system_fail()
 
+    def set_publisher(self, msg, sender):
+        """
+        Set the publisher
+
+        :param msg: The message to handle
+        :type msg: Message
+        :param sender: The message sender
+        :type sender: BaseActor
+        """
+        payload = msg.payload
+        if isinstance(payload, BaseActor):
+            self.__publisher = payload 
+
+    def set_drop_policy(self, msg, sender):
+        """
+        Set the drop policy 
+        """
+        payload = msg.payload
+        if isinstance(payload, str):
+            self.drop_policy = payload
+
     def receiveMessage(self, msg, sender):
         """
         Handle message on receipt.
@@ -72,5 +96,9 @@ class Publisher(BaseActor):
             elif isinstance(msg, DeSubscribe):
                 actor = msg.payload
                 self.desubscribe(actor)
+            elif isinstance(msg, SetPublisher):
+                self.set_publisher(msg, sender)
+            elif isinstance(msg, SetDropPolicy):
+                self.set_drop_policy(msg, sender)
         except Exception:
             handle_actor_system_fail()
