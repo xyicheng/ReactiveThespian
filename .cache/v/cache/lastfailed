@@ -1,5 +1,4 @@
 {
   "test/test_actors_reactive.py::TestActorSystem::()::test_ask": true,
-  "test/test_actors_reactive.py::TestActorSystem::()::test_tell": true,
-  "test/test_subscription.py::TestSubscription::()::test_creation_and_cancel": true
+  "test/test_actors_reactive.py::TestActorSystem::()::test_tell": true
 }

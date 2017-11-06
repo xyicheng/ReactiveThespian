@@ -13,8 +13,9 @@ from time import sleep
 from reactive.actor.base_actor import BaseActor
 from reactive.error.handler import handle_actor_system_fail
 from reactive.message.router_messages import Subscribe, DeSubscribe
-from reactive.message.stream_messages import Cancel, Pull, Push
-from reactive.streams.base_objects.subscription import Subscription
+from reactive.message.stream_messages import Cancel, Pull, Push, GetDropPolicy,\
+    GetSubscribers
+import pdb
 
 
 class SubscriptionPool(BaseActor):
@@ -30,8 +31,34 @@ class SubscriptionPool(BaseActor):
         self.__subscriptions = []
         self.__empty_batch_wait = 2
         self.__empty_times = 0
-        self.__result_q = Queue(maxsize=1000)
+        self.__default_queue_size = 1000
+        self.__result_q = Queue(maxsize=self.__default_queue_size)
         self.__drop_policy ="ignore"
+
+    def get_default_queue_size(self):
+        """
+        Return the default queue size
+
+        :return: Get the default queue size
+        :type: int()
+        """
+        return self.__default_queue_size
+
+    def get_result_q(self):
+        """
+        Obtain the result queue.
+        :return: The result queue
+        :rtype: list()
+        """
+        return self.__result_q
+
+    def get_subscriptions(self):
+        """
+        Get the subscription
+        :return: The current subscriptions
+        :rtype: list()
+        """
+        return self.__subscriptions
 
     def set_drop_policy(self, msg, sender):
         """
@@ -47,6 +74,20 @@ class SubscriptionPool(BaseActor):
             if payload in ["pop", "ignore"]:
                 self.__drop_policy = payload
 
+    def get_drop_policy(self, msg, sender):
+        """
+        Get the drop policy
+
+        :param msg: The message to handle
+        :type msg: Message
+        :param sender: The message sender
+        :type sender: BaseActor
+        """
+        if msg.sender:
+            sender = msg.sender
+        msg = GetDropPolicy(self.__drop_policy, sender, self)
+        self.send(sender, msg)
+
     def subscribe(self, subscription):
         """
         Add a subscription to the pool.
@@ -56,8 +97,8 @@ class SubscriptionPool(BaseActor):
         """
         if subscription not in self.__subscriptions:
             self.__subscriptions.append(subscription)
-    
-    def next(self, msg):
+
+    def next(self, msg, sender):
         """
         Implemented by the user. Returns the next object in the result queue.
 
@@ -92,12 +133,11 @@ class SubscriptionPool(BaseActor):
             self.send(subscription, Cancel)
             self.remove_subscription(subscription)
 
-    def handle_push(self, msg):
+    def handle_push(self, msg, sender):
         """
         Handle a push request to the queue.
         """
         batch = msg.payload
-        
         if isinstance(batch, list):
             if len(batch) > 0:
                 self.__empty_times = 0
@@ -121,6 +161,20 @@ class SubscriptionPool(BaseActor):
                         twait = self.__empty_batch_wait / len(self.__subscriptions)
                         sleep(twait)
 
+    def get_subscribers(self, msg, sender):
+        """
+        Get the list of current subscribers
+
+        :param msg: The message to handle
+        :type msg: Message
+        :param sender: The message sender
+        :type sender: BaseActor
+        """
+        if msg.sender:
+            sender = msg.sender
+        msg = GetSubscribers(self.__subscriptions, sender, self)
+        self.send(sender, msg)
+
     def receiveMessage(self, msg, sender):
         """
         Handle message on receipt.
@@ -133,22 +187,19 @@ class SubscriptionPool(BaseActor):
         try:
             if isinstance(msg, Subscribe):
                 sub = msg.payload
-                if isinstance(sub, Subscription):
-                    self.subscribe(sub)
+                self.subscribe(sub)
             elif isinstance(msg, DeSubscribe):
                 sub = msg.payload
-                if isinstance(sub, Subscription):
-                    self.remove_subscription(sub)
+                self.remove_subscription(sub)
             elif isinstance(msg, Pull):
-                self.next(msg)
+                self.next(msg, sender)
             elif isinstance(msg, Push):
-                self.handle_push(msg)
+                self.handle_push(msg, sender)
             elif isinstance(msg, Cancel):
-                cncl = msg.payload
-                if isinstance(cncl, Subscription):
-                    self.cancel(sub)
+                self.cancel(msg)
+            elif isinstance(msg, GetDropPolicy):
+                self.get_drop_policy(msg, sender)
+            elif isinstance(msg, GetSubscribers):
+                self.get_subscribers(msg, sender)
         except Exception:
             handle_actor_system_fail()
-
-if __name__ == "__main__":
-    pass

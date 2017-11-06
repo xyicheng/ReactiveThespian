@@ -14,11 +14,33 @@ class SubscribeWithLogic(Message):
         self.logic = logic
 
 
+class SubscribeWithPriority(Message):
+
+    def __init__(self, payload, priority, target, sender):
+        super().__init__(payload, target, sender)
+        self.priority = priority
+
+
+class ResetPriority(Message):
+
+    def __init__(self, payload, priority, target, sender):
+        super().__init__(payload, target, sender)
+        self.priority = priority
+
+
+class Peek(Message):
+    pass
+
+
 class SetSubscriber(Message):
     pass
 
 
 class SetDropPolicy(Message):
+    pass
+
+
+class GetDropPolicy(Message):
     pass
 
 
@@ -46,4 +68,8 @@ class Cancel(Message):
 
 
 class SetPublisher(Message):
+    pass
+
+
+class GetSubscribers(Message):
     pass

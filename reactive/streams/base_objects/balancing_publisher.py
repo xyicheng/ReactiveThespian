@@ -69,9 +69,9 @@ class BalancingPublisher(Publisher):
             val = self.queue.get_nowait()
             batch.append(val)
             pull_size += 1
-        msg = Push(batch, sender, self)
+        msg = Push(batch, sender, self.myAddress)
         self.send(sender, msg)
-        msg = Pull(pull_size, self.__publisher, self)
+        msg = Pull(pull_size, self.__publisher, self.myAddress)
         self.send(self.__publisher, msg)
 
     def receiveMessage(self, msg, sender):

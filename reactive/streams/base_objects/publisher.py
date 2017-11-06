@@ -40,7 +40,7 @@ class Publisher(BaseActor):
         """
         try:
             if isinstance(subscription, Subscription):
-                sub = Subscribe(subscription, self.__pool, self)
+                sub = Subscribe(subscription, self.__pool, self.myAddress)
                 self.send(self.__pool, sub)
         except Exception:
             handle_actor_system_fail()
@@ -54,7 +54,7 @@ class Publisher(BaseActor):
         """
         try:
             if isinstance(subscription, Subscription):
-                sub = DeSubscribe(subscription, self.__pool, self)
+                sub = DeSubscribe(subscription, self.__pool, self.myAddress)
                 self.send(self.__pool, sub)
         except Exception:
             handle_actor_system_fail()

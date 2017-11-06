@@ -103,7 +103,7 @@ class LogicPublisher(Publisher):
             msg = Push(batch, sender, self)
             self.send(sender, msg)
             if pull_size > 0:
-                msg = Pull(pull_size, self.__publisher, self)
+                msg = Pull(pull_size, self.__publisher, self.myAddress)
                 self.send(self.__publisher, msg)
 
     def subscribe(self, msg, sender):

@@ -101,10 +101,10 @@ class MultiQPublisher(Publisher):
                     while pull_size < batch_size and rq.empty() is False:
                         val = rq.get_nowait()
                         batch.append(val)
-        msg = Push(batch, self.__publisher, self)
+        msg = Push(batch, self.__publisher, self.myAddress)
         self.send(self.__publisher, msg)
         if pull_size > 0:
-            msg = Pull(pull_size, self.__publisher, self)
+            msg = Pull(pull_size, self.__publisher, self.myAddress)
             self.send(self.__publisher, msg)
 
     def subscribe(self, subscription):

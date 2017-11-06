@@ -19,7 +19,8 @@ from reactive.actor.state import ActorState
 from reactive.error.handler import handle_actor_system_fail
 from reactive.message.router_messages import Subscribe
 from reactive.message.stream_messages import Pull, Cancel, Push, SetSubscriber,\
-    SetDropPolicy
+    SetDropPolicy, GetDropPolicy, Peek
+import pdb
 
 
 class Subscription(BaseActor):
@@ -37,7 +38,8 @@ class Subscription(BaseActor):
         :type drop_policy
         """
         super().__init__()
-        self.__result_q = Queue(maxsize=1000)
+        self.__default_q_size = 1000
+        self.__result_q = Queue(maxsize=self.__default_q_size)
         self.__subscriber = None
         self.__subscribed = False
         self.__drop_policy = "ignore"
@@ -55,6 +57,18 @@ class Subscription(BaseActor):
             if payload.strip().lower() in ["pop", "ignore"]:
                 self.__drop_policy = payload
 
+    def get_drop_policy(self, msg, sender):
+        """
+        Get the current drop policy.
+
+        :param msg: The message to handle
+        :type msg: Message
+        :param sender: The message sender
+        :type sender: Sender
+        """
+        msg = GetDropPolicy(self.__drop_policy, sender, self)
+        self.send(sender, msg)
+
     def set_subscriber(self, msg, sender):
         """
         Set the subscriber
@@ -65,8 +79,7 @@ class Subscription(BaseActor):
         :type sender: BaseActor
         """
         payload = msg.payload
-        if isinstance(msg, BaseActor):
-            self.__subscriber = payload
+        self.__subscriber = payload
 
     def request(self, batch_size, sender):
         """
@@ -78,7 +91,7 @@ class Subscription(BaseActor):
         :type sender: BaseActor
         """
         rec = self.__subscriber
-        msg = Pull(batch_size, self)
+        msg = Pull(batch_size, sender, self.myAddress)
         self.send(rec, msg)
 
     def on_next(self, batch_size, sender):
@@ -94,13 +107,15 @@ class Subscription(BaseActor):
         batch = []
         while pull_size < batch_size and self.__result_q.empty() is False:
             val = self.__result_q.get_nowait()
+            rq = self.__result_q
             batch.append(val)
             pull_size += 1
-        msg = Push(batch, sender, self)
+        msg = Push(batch, sender, self.myAddress)
         self.send(sender, msg)
         if pull_size > 0:
             self.request(pull_size, sender)
-            self.handle_next(sender)
+        elif pull_size is 0 and self.__result_q.empty():
+            self.request(batch_size, sender)
 
     def cancel(self):
         """
@@ -123,7 +138,7 @@ class Subscription(BaseActor):
         if self.__subscribed is False:
             pub = msg.payload
             if isinstance(pub, BaseActor):
-                Subscribe(self.__subscriber, pub, self)
+                Subscribe(self.__subscriber, pub, self.myAddress)
                 self.send(pub, msg)
                 self.__subscribed = True
 
@@ -134,7 +149,7 @@ class Subscription(BaseActor):
         failure.
         """
         logging.info("Actor Completing {}".format(str(self)))
-    
+
     def handle_batch(self, msg):
         """
         Handle a batch of results.
@@ -153,7 +168,30 @@ class Subscription(BaseActor):
                             pass
 
                 if self.__result_q.full() is False:
-                    self.__result_q.put(result)
+                    self.__result_q.put_nowait(result)
+
+    def peek(self, msg, sender):
+        """
+        For testing purposes, allows to peek in the queue
+
+        :param msg: The peek message
+        :type msg: Message
+        :param sender: The sender
+        :type sender: BaseActor
+        """
+        payload = msg.payload
+        if msg.sender:
+            sender = msg.sender
+        batch = []
+        if isinstance(payload, int):
+            if self.__result_q.empty() is False:
+                i = 0
+                while i < payload and self.__result_q.empty() is False:
+                    i += 1
+                    val = self.__result_q.get_nowait()
+                    batch.append(val)
+        msg = Push(batch, sender, self.myAddress)
+        self.send(sender, msg)
 
     def receiveMessage(self, msg, sender):
         """
@@ -175,6 +213,10 @@ class Subscription(BaseActor):
                 self.set_subscriber(msg, sender)
             elif isinstance(msg, SetDropPolicy):
                 self.set_drop_policy(msg, sender)
+            elif isinstance(msg, GetDropPolicy):
+                self.get_drop_policy(msg, sender)
+            elif isinstance(msg, Peek):
+                self.peek(msg, sender)
             elif isinstance(msg, Cancel):
                 self.cancel()
         except Exception:
