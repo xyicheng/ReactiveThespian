@@ -72,13 +72,18 @@ class TestRoundRobinSubscriptionPool:
         asys.tell(subb, ssn)
         rrs = Subscribe(subb, rr, None)
         asys.tell(rr, rrs)
+        
+        st = asys.createActor(SubTest)
+        msg = Subscribe(rr, st, None)
+        asys.tell(st, msg)
+
         pll = Pull(50, rr, None)
-        rval = asys.ask(rr, pll)
+        rval = asys.ask(st, pll)
         assert isinstance(rval, Push)
         assert isinstance(rval.payload, list)
         assert len(rval.payload) is 0
         tstart = datetime.now()
         while len(rval.payload) is 0 and tstart - datetime.now() <  timedelta(seconds=120):
-            pll = Pull(50, rr, None)
-            rval = asys.ask(rr, pll)
+            pll = Pull(50, st, None)
+            rval = asys.ask(st, pll)
         assert len(rval.payload) is 50

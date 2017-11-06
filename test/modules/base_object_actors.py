@@ -27,12 +27,12 @@ class SubTest(BaseActor):
                 self.__subpool = payload
             elif isinstance(msg, Pull):
                 payload_size = msg.payload
-                self.send(sender, Push(self.results, sender, self))
+                self.send(sender, Push(self.results, sender, self.myAddress))
                 self.results = []
-                self.send(self.__subpool, Pull(payload_size, self.__subpool, self))
+                self.send(self.__subpool, Pull(payload_size, self.__subpool, self.myAddress))
             elif isinstance(msg, Push):
                 payload = msg.payload
-                self.results = payload
+                self.results.extend(payload)
         except Exception:
             handle_actor_system_fail()
 
