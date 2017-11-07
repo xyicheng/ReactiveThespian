@@ -7,10 +7,10 @@ Created on Nov 5, 2017
 '''
 
 from reactive.error.handler import handle_actor_system_fail
-from reactive.message.stream_messages import SetDropPolicy, Pull, Push
+from reactive.message.stream_messages import Pull, Push
 from reactive.streams.base_objects.subscription_pool import SubscriptionPool
-from reactive.message.router_messages import Subscribe, DeSubscribe
-from asyncio.events import Handle
+import pdb
+
 
 class SubscriptionRate():
     """
@@ -25,7 +25,7 @@ class SubscriptionRate():
         :param rate: The current rate
         :type rate: int()
         """
-        self.subscription = None
+        self.subscription = subscription
         self.rate = [rate]
 
 
@@ -49,7 +49,8 @@ class RatedSubscriptionPool(SubscriptionPool):
         :type subscription: Subscription
         """
         sbr = SubscriptionRate(subscription, 1)
-        self.__waiting.append(sbr) 
+        self.__waiting.append(sbr)
+        self.get_subscriptions().append(sbr)
 
     def remove_subscription(self, subscription):
         """
@@ -64,11 +65,15 @@ class RatedSubscriptionPool(SubscriptionPool):
                 found.append(sub)
         if len(found) > 0:
             for sub in found:
+                if sub in self.get_subscriptions():
+                    self.get_subscriptions().remove(sub)
                 self.__avail.remove(sub)
 
         found = []
         for sub in self.__waiting:
             if sub == subscription:
+                if sub in self.get_subscriptions():
+                    self.get_subscriptions().remove(sub)
                 found.append(sub)
         if len(found) > 0:
             for sub in found:
@@ -81,18 +86,20 @@ class RatedSubscriptionPool(SubscriptionPool):
         self.__avail = sorted(self.__waiting, key=lambda x: int(sum(x.rate)/3))
         self.__waiting = []
 
-    def next(self, msg):
+    def next(self, msg, sender):
         """
         Get the next batch
 
         :param msg: The message
         :type msg: Message
+        :param sender: The message sender
+        :type sender: BaseActor
         """
         if msg.sender:
             sender = msg.sender
         batch_size = msg.payload
         batch = []
-        rq = super().__result_q
+        rq = self.get_result_q()
         pull_size = 0
         if rq.empty() is False:
             while rq.empty() is False and pull_size < batch_size:
@@ -102,22 +109,26 @@ class RatedSubscriptionPool(SubscriptionPool):
                     pull_size += 1
                 except Exception:
                     handle_actor_system_fail()
-        subs = super().get_subscriptions()
+        msg = Push(batch, sender, self)
+        self.send(sender, msg)
+        subs = self.get_subscriptions()
         if pull_size > 0:
             if len(self.__avail) == 0:
                 self.__remake_available()
             sub = self.__avail.pop(0)
-            msg = Pull(pull_size, sub, self.myAddress)
-            self.send(sub, msg)
+            subscription = sub.subscription
+            msg = Pull(pull_size, subscription, self.myAddress)
+            self.send(subscription, msg)
         elif rq.empty() and len(subs) > 0:
             pull_size = int(500 / len(subs))
             for sub in subs:
-                msg = Pull(pull_size, sub, self.myAddress)
-                self.send(sender, msg)
+                subscription = sub.subscription
+                msg = Pull(pull_size, subscription, self.myAddress)
+                self.send(subscription, msg)
 
     def handle_push(self, msg, sender):
         """
-        Handle a pusho on the result queue.
+        Handle a push on the result queue.
 
         :param msg: The message to handle
         :type msg: Message
@@ -127,11 +138,11 @@ class RatedSubscriptionPool(SubscriptionPool):
         batch = msg.payload
         if isinstance(batch, list):
             for res in batch:
-                if self.__result_q.full():
+                if self.get_result_q().full():
                     if self.__drop_policy == "pop":
                         try:
-                            self.__result_q.get_nowait()
+                            self.get_result_q().get_nowait()
                         except:
                             handle_actor_system_fail()
-                    if self.__result_q.full() is False:
-                        self.__result_q.put_nowait(res)
+                if self.get_result_q().full() is False:
+                    self.get_result_q().put_nowait(res)

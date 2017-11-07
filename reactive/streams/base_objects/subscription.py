@@ -105,8 +105,8 @@ class Subscription(BaseActor):
         pull_size = 0
         batch = []
         while pull_size < batch_size and self.__result_q.empty() is False:
-            val = self.__result_q.get_nowait()
             rq = self.__result_q
+            val = rq.get_nowait()
             batch.append(val)
             pull_size += 1
         msg = Push(batch, sender, self.myAddress)

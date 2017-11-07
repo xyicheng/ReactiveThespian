@@ -1,20 +1,24 @@
 '''
-Round Robin Subscription Pool test
+Test the rated subscription pool.
 
-Created on Nov 5, 2017
+Created on Nov 7, 2017
 
 @author: aevans
 '''
 
+
 import pytest
 from thespian.actors import ActorSystem
-from reactive.streams.base_objects.round_robin_subscription_pool import RoundRobinSubscriptionPool
-from reactive.message.stream_messages import Cancel, Push, Pull, SetSubscriber
-from reactive.message.router_messages import Subscribe
-from reactive.streams.base_objects.subscription import Subscription
-from test.modules.object_work import get_work_batch_array
+from reactive.message.stream_messages import SetSubscriber,\
+    Pull, Push, Cancel
 from test.modules.base_object_actors import PublisherStringActor, SubTest
-from _datetime import timedelta, datetime
+from reactive.streams.base_objects.subscription import Subscription
+from reactive.message.router_messages import Subscribe
+from datetime import datetime
+from reactive.streams.base_objects.rated_subscription_pool import RatedSubscriptionPool
+from test.modules.object_work import get_work_batch_array
+from asyncio.tasks import sleep
+from datetime import timedelta
 
 
 @pytest.fixture(scope="module")
@@ -22,15 +26,15 @@ def asys():
     asys = ActorSystem()
     yield asys
     asys.shutdown()
-        
 
-class TestRoundRobinSubscriptionPool:
+
+class TestRatedSubscriptionPool:
 
     def test_creation(self, asys):
         """
         Test the creation of a round robin subscription pool
         """
-        rr = asys.createActor(RoundRobinSubscriptionPool)
+        rr = asys.createActor(RatedSubscriptionPool)
         cncl = Cancel(None, rr, None)
         asys.tell(rr, cncl)
 
@@ -38,11 +42,11 @@ class TestRoundRobinSubscriptionPool:
         """
         Test a push from the subscription pool
         """
-        rr = asys.createActor(RoundRobinSubscriptionPool)
+        rr = asys.createActor(RatedSubscriptionPool)
         sub = asys.createActor(SubTest) 
         msg = Subscribe(sub, rr, None)
         asys.tell(rr, msg)
-        work = get_work_batch_array()
+        work = get_work_batch_array
         msg = Push(work, rr, None)
         asys.tell(rr, msg)
         cncl = Cancel(None, rr, None)
@@ -52,7 +56,7 @@ class TestRoundRobinSubscriptionPool:
         """
         Test a pull from the subscription pool
         """
-        rr = asys.createActor(RoundRobinSubscriptionPool)
+        rr = asys.createActor(RatedSubscriptionPool)
 
         suba = asys.createActor(Subscription)
         sub_puba = asys.createActor(PublisherStringActor)
@@ -63,11 +67,11 @@ class TestRoundRobinSubscriptionPool:
 
         subb = asys.createActor(Subscription)
         sub_pubb = asys.createActor(PublisherStringActor)
-        ssn = SetSubscriber(sub_pubb, suba, None)
+        ssn = SetSubscriber(sub_pubb, subb, None)
         asys.tell(subb, ssn)
         rrs = Subscribe(subb, rr, None)
         asys.tell(rr, rrs)
-        
+
         st = asys.createActor(SubTest)
         msg = Subscribe(rr, st, None)
         asys.tell(st, msg)
@@ -80,5 +84,6 @@ class TestRoundRobinSubscriptionPool:
         tstart = datetime.now()
         while len(rval.payload) is 0 and tstart - datetime.now() <  timedelta(seconds=120):
             pll = Pull(50, st, None)
+            sleep(1)
             rval = asys.ask(st, pll)
         assert len(rval.payload) is 50

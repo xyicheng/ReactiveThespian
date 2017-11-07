@@ -10,7 +10,6 @@ from reactive.streams.base_objects.subscription_pool import SubscriptionPool
 from reactive.message.stream_messages import GetDropPolicy, Cancel,\
     GetSubscribers
 from reactive.actor.base_actor import BaseActor
-import pdb
 from reactive.message.router_messages import Subscribe, DeSubscribe
 
 

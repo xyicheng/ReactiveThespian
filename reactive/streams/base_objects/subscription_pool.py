@@ -15,7 +15,6 @@ from reactive.error.handler import handle_actor_system_fail
 from reactive.message.router_messages import Subscribe, DeSubscribe
 from reactive.message.stream_messages import Cancel, Pull, Push, GetDropPolicy,\
     GetSubscribers
-import pdb
 
 
 class SubscriptionPool(BaseActor):
