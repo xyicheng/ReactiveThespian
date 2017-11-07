@@ -10,8 +10,6 @@ Created on Nov 1, 2017
 from reactive.error.handler import handle_actor_system_fail
 from reactive.message.stream_messages import Pull, Push
 from reactive.streams.base_objects.subscription_pool import SubscriptionPool
-import pdb
-
 
 class RoundRobinSubscriptionPool(SubscriptionPool):
     """
@@ -39,7 +37,6 @@ class RoundRobinSubscriptionPool(SubscriptionPool):
         """
         if msg.sender:
             sender = msg.sender
-        subs = super().get_subscriptions()
         batch_size = msg.payload
         batch = []
         rq = super().get_result_q()

@@ -20,7 +20,6 @@ from reactive.error.handler import handle_actor_system_fail
 from reactive.message.router_messages import Subscribe
 from reactive.message.stream_messages import Pull, Cancel, Push, SetSubscriber,\
     SetDropPolicy, GetDropPolicy, Peek
-import pdb
 
 
 class Subscription(BaseActor):
@@ -128,7 +127,6 @@ class Subscription(BaseActor):
     def on_subscribe(self, msg, sender):
         """
         This subscribes to a publisher. Only one publisher is allowed.
-
 
         :param msg: The sending message
         :type msg: Message

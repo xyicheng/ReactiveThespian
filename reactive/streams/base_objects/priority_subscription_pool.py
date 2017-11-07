@@ -11,8 +11,7 @@ from reactive.streams.base_objects.subscription_pool import SubscriptionPool
 from reactive.error.handler import handle_actor_system_fail
 from reactive.message.stream_messages import Pull, Push, Cancel,\
     SubscribeWithPriority
-from reactive.message.router_messages import Subscribe, DeSubscribe
-from reactive.streams.base_objects.subscription import Subscription
+from reactive.message.router_messages import DeSubscribe
 
 
 class SubscriptionPriority:
@@ -59,35 +58,41 @@ class PrioritySubscriptionPool(SubscriptionPool):
         :param sender: The sender
         :type sender: BaseActor
         """
-        batch_size = msg.payload
         if msg.sender:
             sender = msg.sender
+        batch_size = msg.payload
         batch = []
-        rq = super().__result_q
+        rq = super().get_result_q()
         pull_size = 0
-        if rq.empty() is False:
-            while rq.empty() is False and pull_size < batch_size:
-                try:
-                    pull_size += 1
-                    val = rq.get_nowait()
-                    batch.append(val)
-                except Exception:
-                    handle_actor_system_fail()
-        msg = Push(batch, sender, self.myAddress)
+        if batch_size > 0:
+            if rq.empty() is False:
+                i = 0
+                while rq.empty() is False and i < batch_size:
+                    try:
+                        pull_size += 1
+                        val = rq.get_nowait()
+                        batch.append(val)
+                    except Exception:
+                        handle_actor_system_fail()
+                    finally:
+                        i += 1
+        msg = Push(batch, sender, self)
         self.send(sender, msg)
-        subs = super().get_subscriptions()
+        subs = self.get_subscriptions()
         if pull_size > 0:
             if len(self.__priority_queue) == 0:
                 self.remake_priority_queue()
             sub = self.__priority_queue.pop(0)
+            outsub = sub.subscription
             self.__waiting_queue.append(sub)
             msg = Pull(pull_size, self)
-            self.send(sub, msg)
+            self.send(outsub, msg)
         elif rq.empty() and len(subs) > 0:
-            pull_size = int(500 / len(subs))
+            pull_size = int(self.get_default_queue_size() / len(subs))
             for sub in subs:
-                msg = Pull(pull_size, sub, self.myAddress)
-                self.send(sender, msg)
+                outsub = sub.subscription
+                msg = Pull(pull_size, outsub, self.myAddress)
+                self.send(outsub, msg)
 
     def handle_push(self, msg, sender):
         """
@@ -100,7 +105,7 @@ class PrioritySubscriptionPool(SubscriptionPool):
         """
         payload = msg.payload
         if isinstance(payload, list):
-            rq = self.__result_q
+            rq = self.get_result_q()
             for result in payload:
                 if rq.full():
                     if self.__drop_policy == "pop":
@@ -125,17 +130,17 @@ class PrioritySubscriptionPool(SubscriptionPool):
         found = False
         i = 0
         sp = None
-        while not found and i < len(self.__subscriptions):
-            i += 1
-            psp = self.__subscriptions[i]
-            if sp.subscription == subscription:
+        while not found and i < len(self.get_subscriptions()):
+            psp = self.get_subscriptions()[i]
+            if psp.subscription == subscription:
                 found = True
                 sp = psp
+            i += 1
         if sp:
             sp.priority = msg.default_priority
         else:
             sp = SubscriptionPriority(subscription, 0)
-            self.__subscriptions.append(sp)
+            self.get_subscriptions().append(sp)
             self.__waiting_queue.append(sp)
 
     def desubscribe(self, msg, sender):
@@ -149,11 +154,11 @@ class PrioritySubscriptionPool(SubscriptionPool):
         """
         subscription = msg.payload
         i = 0
-        while i < len(self.__subscriptions):
+        while i < len(self.get_subscriptions()):
             sp = self.__subscriptions
             if subscription == sp.subscription:
-                i = len(self.__subscriptions)
-                self.__subscriptions.remove(sp)
+                i = len(self.get_subscriptions())
+                self.get_subscriptions().remove(sp)
 
     def receiveMessage(self, msg, sender):
         """
@@ -166,17 +171,15 @@ class PrioritySubscriptionPool(SubscriptionPool):
         """
         try:
             if isinstance(msg, SubscribeWithPriority):
-                sub = msg.payload
-                self.subscribe(sub)
+                self.subscribe(msg, sender)
             elif isinstance(msg, DeSubscribe):
-                sub = msg.payload
-                self.remove_subscription(sub)
+                self.remove_subscription(msg, sender)
             elif isinstance(msg, Pull):
                 self.next(msg, sender)
             elif isinstance(msg, Push):
                 self.handle_push(msg, sender)
             elif isinstance(msg, Cancel):
-                cncl = msg.payload
+                sub = msg.payload
                 self.cancel(sub)
         except Exception:
             handle_actor_system_fail()
