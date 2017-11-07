@@ -82,8 +82,12 @@ class TestRatedSubscriptionPool:
         assert isinstance(rval.payload, list)
         assert len(rval.payload) is 0
         tstart = datetime.now()
-        while len(rval.payload) is 0 and tstart - datetime.now() <  timedelta(seconds=120):
+        i = 0
+        while i < 100 and tstart - datetime.now() <  timedelta(seconds=120):
             pll = Pull(50, st, None)
             sleep(1)
             rval = asys.ask(st, pll)
+            if len(rval.payload) > 0:
+                i += 1
+        assert i == 100
         assert len(rval.payload) is 50

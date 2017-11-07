@@ -9,7 +9,6 @@ Created on Nov 5, 2017
 from reactive.error.handler import handle_actor_system_fail
 from reactive.message.stream_messages import Pull, Push
 from reactive.streams.base_objects.subscription_pool import SubscriptionPool
-import pdb
 
 
 class SubscriptionRate():
@@ -26,7 +25,8 @@ class SubscriptionRate():
         :type rate: int()
         """
         self.subscription = subscription
-        self.rate = [rate]
+        self.rate = rate
+        self.defualt_rate = rate
 
 
 class RatedSubscriptionPool(SubscriptionPool):
@@ -83,7 +83,7 @@ class RatedSubscriptionPool(SubscriptionPool):
         """
         Recreate the available subscription list
         """
-        self.__avail = sorted(self.__waiting, key=lambda x: int(sum(x.rate)/3))
+        self.__avail = sorted(self.__waiting, key=lambda x: x.rate)
         self.__waiting = []
 
     def next(self, msg, sender):
@@ -146,3 +146,12 @@ class RatedSubscriptionPool(SubscriptionPool):
                             handle_actor_system_fail()
                 if self.get_result_q().full() is False:
                     self.get_result_q().put_nowait(res)
+            sp = None
+            for sub in self.get_subscriptions():
+                if sub.subscription == sender:
+                    sp = sub
+            if sp:
+                if len(batch) is 0:
+                    sp.rate = max([sp.rate - 1, 0])
+                else:
+                    sp.rate = min([sp.rate + 1, sp.default_rate])
