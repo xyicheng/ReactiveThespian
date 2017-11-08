@@ -12,7 +12,9 @@ from reactive.actor.base_actor import BaseActor
 from reactive.error.handler import handle_actor_system_fail
 from reactive.message.router_messages import Subscribe, DeSubscribe
 from reactive.streams.base_objects.subscription import Subscription
-from reactive.message.stream_messages import SetPublisher, SetDropPolicy
+from reactive.message.stream_messages import SetPublisher, SetDropPolicy,\
+    GetSubscribers, GetPublisher
+import pdb
 
 
 class Publisher(BaseActor):
@@ -31,7 +33,7 @@ class Publisher(BaseActor):
         self.__publisher = None
         self.drop_policy = "ignore"
 
-    def subscribe(self, subscription):
+    def subscribe(self, msg, sender):
         """
         Subscribe a subscription actor
 
@@ -39,13 +41,12 @@ class Publisher(BaseActor):
         :type subscription: Subscription
         """
         try:
-            if isinstance(subscription, Subscription):
-                sub = Subscribe(subscription, self.__pool, self.myAddress)
-                self.send(self.__pool, sub)
+            sub = msg.payload
+            self.__subscriptions.append(sub)    
         except Exception:
             handle_actor_system_fail()
 
-    def desubscribe(self, subscription):
+    def desubscribe(self, msg, sender):
         """
         DeSubscribe a subscription actor
 
@@ -53,9 +54,13 @@ class Publisher(BaseActor):
         :type subscription: Subscription
         """
         try:
-            if isinstance(subscription, Subscription):
-                sub = DeSubscribe(subscription, self.__pool, self.myAddress)
-                self.send(self.__pool, sub)
+            rsub = msg.payload
+            sp = None
+            for sub in self.__subscriptions:
+                if rsub == sub:
+                    sp = sub
+            if sp:
+                self.__subscriptions.remove(sp)
         except Exception:
             handle_actor_system_fail()
 
@@ -69,16 +74,44 @@ class Publisher(BaseActor):
         :type sender: BaseActor
         """
         payload = msg.payload
-        if isinstance(payload, BaseActor):
-            self.__publisher = payload 
+        self.__publisher = payload 
 
     def set_drop_policy(self, msg, sender):
         """
         Set the drop policy 
         """
         payload = msg.payload
-        if isinstance(payload, str):
-            self.drop_policy = payload
+        self.drop_policy = payload
+
+    def get_subscribers(self, msg, sender):
+        """
+        Obtain the current subscribers
+
+        :param msg: Message to handle
+        :type msg: Message
+        :param sender: Message sender
+        :type sender: BaseActor
+        """
+        if msg.sender:
+            sender = msg.sender
+        subs = self.__subscriptions
+        msg = GetSubscribers(subs, sender, self.myAddress)
+        self.send(sender, msg)
+
+    def get_publisher(self, msg, sender):
+        """
+        Get the current publisher
+
+        :param msg: The message to handle
+        :type msg: Message
+        :param sender: The message sender
+        :type sender: BaseActor
+        """
+        if msg.sender:
+            sender = msg.sender
+        pub = self.__publisher
+        msg = GetPublisher(pub, sender, self.myAddress)
+        self.send(sender, msg)
 
     def receiveMessage(self, msg, sender):
         """
@@ -91,14 +124,16 @@ class Publisher(BaseActor):
         """
         try:
             if isinstance(msg, Subscribe):
-                actor = msg.payload
-                self.subscribe(actor)
+                self.subscribe(msg, sender)
             elif isinstance(msg, DeSubscribe):
-                actor = msg.payload
-                self.desubscribe(actor)
+                self.desubscribe(msg, sender)
             elif isinstance(msg, SetPublisher):
                 self.set_publisher(msg, sender)
             elif isinstance(msg, SetDropPolicy):
                 self.set_drop_policy(msg, sender)
+            elif isinstance(msg, GetSubscribers):
+                self.get_subscribers(msg, sender)
+            elif isinstance(msg, GetPublisher):
+                self.get_publisher(msg, sender)
         except Exception:
             handle_actor_system_fail()

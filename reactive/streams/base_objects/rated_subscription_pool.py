@@ -83,7 +83,7 @@ class RatedSubscriptionPool(SubscriptionPool):
         """
         Recreate the available subscription list
         """
-        self.__avail = sorted(self.__waiting, key=lambda x: x.rate)
+        self.__avail = list(sorted(self.__waiting, key=lambda x: x.rate))
         self.__waiting = []
 
     def next(self, msg, sender):
@@ -116,6 +116,7 @@ class RatedSubscriptionPool(SubscriptionPool):
             if len(self.__avail) == 0:
                 self.__remake_available()
             sub = self.__avail.pop(0)
+            self.__waiting.append(sub)
             subscription = sub.subscription
             msg = Pull(pull_size, subscription, self.myAddress)
             self.send(subscription, msg)
@@ -154,4 +155,4 @@ class RatedSubscriptionPool(SubscriptionPool):
                 if len(batch) is 0:
                     sp.rate = max([sp.rate - 1, 0])
                 else:
-                    sp.rate = min([sp.rate + 1, sp.default_rate])
+                    sp.rate = min([sp.rate + 1, sp.defualt_rate])

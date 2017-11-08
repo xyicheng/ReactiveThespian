@@ -73,3 +73,7 @@ class SetPublisher(Message):
 
 class GetSubscribers(Message):
     pass
+
+
+class GetPublisher(Message):
+    pass
