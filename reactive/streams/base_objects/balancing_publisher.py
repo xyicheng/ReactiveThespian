@@ -24,6 +24,7 @@ class BalancingPublisher(Publisher):
         Constructor
         """
         super().__init__()
+        self.__req_on_empty = False
         self.default_qsize = 1000
         self.queue = Queue(maxsize=self.default_qsize)
         self.__drop_policy = "ignore"
@@ -43,6 +44,7 @@ class BalancingPublisher(Publisher):
         :param sender: The sender of the message
         :type sender: BaseActor
         """
+        self.__req_on_empty = False
         payload = msg.payload
         if isinstance(payload, list):
             for res in payload:
@@ -80,7 +82,8 @@ class BalancingPublisher(Publisher):
             if pull_size > 0:
                 msg = Pull(pull_size, self.__publisher, self.myAddress)
                 self.send(self.__publisher, msg)
-            elif rq.empty():
+            elif rq.empty() and not self.__req_on_empty:
+                self.__req_on_empty = True
                 def_q_size = self.default_qsize
                 pull_size = def_q_size
                 pub = self.__publisher

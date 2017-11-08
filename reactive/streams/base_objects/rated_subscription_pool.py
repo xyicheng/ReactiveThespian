@@ -9,6 +9,8 @@ Created on Nov 5, 2017
 from reactive.error.handler import handle_actor_system_fail
 from reactive.message.stream_messages import Pull, Push
 from reactive.streams.base_objects.subscription_pool import SubscriptionPool
+from time import sleep
+import pdb
 
 
 class SubscriptionRate():
@@ -27,6 +29,8 @@ class SubscriptionRate():
         self.subscription = subscription
         self.rate = rate
         self.defualt_rate = rate
+        self.__empty_batch_wait = .2
+        self.__empty_times = 0
 
 
 class RatedSubscriptionPool(SubscriptionPool):
@@ -40,6 +44,8 @@ class RatedSubscriptionPool(SubscriptionPool):
         super().__init__()
         self.__avail = []
         self.__waiting = []
+        self.__empty_times = 0
+        self.__empty_batch_wait = .005
 
     def subscribe(self, subscription):
         """
@@ -138,21 +144,27 @@ class RatedSubscriptionPool(SubscriptionPool):
         """
         batch = msg.payload
         if isinstance(batch, list):
-            for res in batch:
-                if self.get_result_q().full():
-                    if self.__drop_policy == "pop":
-                        try:
-                            self.get_result_q().get_nowait()
-                        except:
-                            handle_actor_system_fail()
-                if self.get_result_q().full() is False:
-                    self.get_result_q().put_nowait(res)
-            sp = None
-            for sub in self.get_subscriptions():
-                if sub.subscription == sender:
-                    sp = sub
-            if sp:
-                if len(batch) is 0:
-                    sp.rate = max([sp.rate - 1, 0])
-                else:
-                    sp.rate = min([sp.rate + 1, sp.defualt_rate])
+            if len(batch) > 0:
+                for res in batch:
+                    if self.get_result_q().full():
+                        if self.__drop_policy == "pop":
+                            try:
+                                self.get_result_q().get_nowait()
+                            except:
+                                handle_actor_system_fail()
+                    if self.get_result_q().full() is False:
+                        self.get_result_q().put_nowait(res)
+                sp = None
+                for sub in self.get_subscriptions():
+                    if sub.subscription == sender:
+                        sp = sub
+                if sp:
+                    if len(batch) is 0:
+                        sp.rate = max([sp.rate - 1, 0])
+                    else:
+                        sp.rate = min([sp.rate + 1, sp.defualt_rate])
+            else:
+                self.__empty_times += 1
+                if self.__empty_times >= len(self.get_subscriptions()):
+                    self.__empty_times = 0
+                    sleep(self.__empty_batch_wait)

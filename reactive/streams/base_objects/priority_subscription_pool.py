@@ -12,6 +12,7 @@ from reactive.error.handler import handle_actor_system_fail
 from reactive.message.stream_messages import Pull, Push, Cancel,\
     SubscribeWithPriority
 from reactive.message.router_messages import DeSubscribe
+from time import sleep
 
 
 class SubscriptionPriority:
@@ -28,6 +29,8 @@ class SubscriptionPriority:
         self.subscription = subscription
         self.default_priority = priority
         self.priority = priority
+        self.__empty_batch_wait = 2
+        self.__empty_times = 0
 
 
 class PrioritySubscriptionPool(SubscriptionPool):
@@ -105,16 +108,23 @@ class PrioritySubscriptionPool(SubscriptionPool):
         """
         payload = msg.payload
         if isinstance(payload, list):
-            rq = self.get_result_q()
-            for result in payload:
-                if rq.full():
-                    if self.__drop_policy == "pop":
-                        try:
-                            rq.get_nowait()
-                        except:
-                            pass
-                if rq.full() is False:
-                    rq.put_nowait(result)
+            if len(payload) > 0:
+                rq = self.get_result_q()
+                for result in payload:
+                    if rq.full():
+                        if self.__drop_policy == "pop":
+                            try:
+                                rq.get_nowait()
+                            except:
+                                pass
+                    if rq.full() is False:
+                        rq.put_nowait(result)
+            else:
+                self.__empty_times += 1
+                subs = self.get_subscriptions()
+                if self.__empty_times >= len(subs):
+                    sleep(self.__empty_batch_wait)
+                    self.__empty_times = 0
 
     def subscribe(self, msg, sender):
         """

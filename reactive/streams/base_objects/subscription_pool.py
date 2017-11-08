@@ -28,7 +28,7 @@ class SubscriptionPool(BaseActor):
         """
         super().__init__()
         self.__subscriptions = []
-        self.__empty_batch_wait = 2
+        self.__empty_batch_wait = .005
         self.__empty_times = 0
         self.__default_queue_size = 1000
         self.__result_q = Queue(maxsize=self.__default_queue_size)

@@ -1,4 +1,7 @@
 {
   "test/test_actors_reactive.py::TestActorSystem::()::test_ask": true,
-  "test/test_actors_reactive.py::TestActorSystem::()::test_tell": true
+  "test/test_actors_reactive.py::TestActorSystem::()::test_tell": true,
+  "test/test_multi_queue_publisher.py::TestMultiQueuePublisher::()::test_push_pull": true,
+  "test/test_multi_queue_publisher.py::TestMultiQueuePublisher::()::test_push_pull_with_multi_pub": true,
+  "test/test_multi_queue_publisher.py::TestMultiQueuePublisher::()::test_push_pull_with_pub": true
 }

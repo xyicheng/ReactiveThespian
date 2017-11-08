@@ -33,6 +33,15 @@ class Publisher(BaseActor):
         self.__publisher = None
         self.drop_policy = "ignore"
 
+    def get_publisher(self):
+        """
+        Obtain the current publisher.
+
+        :return: The publisher
+        :rtype: BaseActor
+        """
+        return self.__publisher
+
     def subscribe(self, msg, sender):
         """
         Subscribe a subscription actor
@@ -98,7 +107,7 @@ class Publisher(BaseActor):
         msg = GetSubscribers(subs, sender, self.myAddress)
         self.send(sender, msg)
 
-    def get_publisher(self, msg, sender):
+    def obtain_publisher(self, msg, sender):
         """
         Get the current publisher
 
@@ -134,6 +143,6 @@ class Publisher(BaseActor):
             elif isinstance(msg, GetSubscribers):
                 self.get_subscribers(msg, sender)
             elif isinstance(msg, GetPublisher):
-                self.get_publisher(msg, sender)
+                self.obtain_publisher(msg, sender)
         except Exception:
             handle_actor_system_fail()

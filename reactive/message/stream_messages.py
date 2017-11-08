@@ -77,3 +77,10 @@ class GetSubscribers(Message):
 
 class GetPublisher(Message):
     pass
+
+
+class PullWithRequester(Message):
+
+    def __init__(self, payload, requestor, target, sender):
+        super().__init__(payload, target, sender)
+        self.requestor = requestor

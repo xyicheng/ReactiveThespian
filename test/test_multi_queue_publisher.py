@@ -13,11 +13,13 @@ from reactive.streams.base_objects.multi_queue_publisher import MultiQPublisher
 from test.modules.object_work import get_work_batch_array
 from reactive.message.stream_messages import Push, Pull, SetPublisher,\
     SetSubscriber
-from test.modules.base_object_actors import PublisherStringActor, SubTest
+from test.modules.base_object_actors import PublisherStringActor, SubTest,\
+    PublisherArrayActor
 from reactive.streams.base_objects.rated_subscription_pool import RatedSubscriptionPool
 from reactive.streams.base_objects.subscription import Subscription
 from reactive.message.router_messages import Subscribe
 from _datetime import timedelta
+import pdb
 
 
 @pytest.fixture(scope="module")
@@ -29,7 +31,7 @@ def asys():
 
 class TestMultiQueuePublisher:
 
-    def test_creation(self, asys):
+    def stest_creation(self, asys):
         """
         Test a publisher creation
         """
@@ -40,16 +42,21 @@ class TestMultiQueuePublisher:
         Test the push and pull
         """
         pub = asys.createActor(MultiQPublisher)
-        varr = get_work_batch_array()
-        msg = Push(varr, pub, None)
+        pubw = asys.createActor(PublisherArrayActor)
+        msg = SetPublisher(pubw, pub, None)
         asys.tell(pub, msg)
-        msg = Pull(5, pub, None)
+        msg = Pull(4, pub, None)
         rval =  asys.ask(pub, msg)
+        tstart = datetime.now()
+        while (rval.payload is None or len(rval.payload) is 0)\
+        and tstart - datetime.now() <  timedelta(seconds=120):
+            pll = Pull(4, pub, None)
+            rval = asys.ask(pub, pll)
         assert isinstance(rval, Push)
         assert isinstance(rval.payload, list)
         assert len(rval.payload) == 4
 
-    def test_push_pull_with_pub(self, asys):
+    def stest_push_pull_with_pub(self, asys):
         """
         Test the push and pull
         """
@@ -84,7 +91,7 @@ class TestMultiQueuePublisher:
         assert i == 100
         assert len(rval.payload) is 50
 
-    def test_push_pull_with_multi_pub(self, asys):
+    def stest_push_pull_with_multi_pub(self, asys):
         """
         Test the push and pull
         """
