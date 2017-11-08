@@ -14,7 +14,7 @@ from reactive.error.handler import handle_actor_system_fail
 from reactive.streams.base_objects.subscription import Subscription
 from reactive.routers.router_type import RouterType
 from reactive.message.stream_messages import Push, Pull, SetPublisher,\
-    SetDropPolicy, PullWithRequester
+    SetDropPolicy, PullWithRequester, SetSubscriber
 import pdb
 
 
@@ -71,22 +71,24 @@ class MultiQPublisher(Publisher):
         :param sender: The sender
         :type sender BaseActor
         """
-        pdb.set_trace()
         self.__req_on_empty = False
         payload = msg.payload
         if self.__router_type == RouterType.BROADCAST:
             for k,v in self.__queues.items():
-                self.put_in_queue(v, payload)
+                for result in payload:
+                    self.put_in_queue(v, result)
         elif self.__router_type == RouterType.ROUND_ROBIN:
             keys = list(sorted(self.__queues.keys()))
             key = keys[self.__current_index]
             rq = self.__queues[key]
-            self.put_in_queue(rq, payload)
+            for result in payload:
+                self.put_in_queue(rq, result)
         elif self.__router_type == RouterType.RANDOM:
             keys = list(sorted(self.__queues.keys()))
             k = Random().choice(keys)
             rq = self.__queues[rq]
-            self.put_in_queue(rq, payload)
+            for result in payload:
+                self.put_in_queue(rq, result)
 
     def contains_addr(self, addr):
         """
@@ -117,10 +119,10 @@ class MultiQPublisher(Publisher):
         if msg.sender:
             sender = msg.sender
         rq = None
-        if self.contains_addr(sender):
-            rq = self.__queues[sender]
+        if self.contains_addr(sender.addressDetails):
+            rq = self.__queues[sender.addressDetails]
             if isinstance(batch_size, int):
-                if len(batch_size) > 0:
+                if batch_size > 0:
                     while pull_size < batch_size and rq.empty() is False:
                         val = rq.get_nowait()
                         batch.append(val)
@@ -130,19 +132,21 @@ class MultiQPublisher(Publisher):
             msg = Pull(pull_size, self.get_publisher(), self.myAddress)
             self.send(self.get_publisher(), msg)
         elif rq and rq.empty():
-            if self.__req_on_empty:
+            if not self.__req_on_empty:
                 self.__req_on_empty = True
                 psize = self.__default_q_size
                 pub = self.get_publisher()
-                msg = PullWithRequester(psize, sender, pub, self)
+                msg = Pull(psize, pub, self.myAddress)
+                self.send(pub, msg)
 
-    def subscribe(self, subscription):
+    def subscribe(self, msg, sender):
         """
         Add a subscription and queue.
         """
-        if isinstance(subscription, Subscription):
-            if subscription not in self.__queues:
-                self.__queues[subscription] = Queue(
+        subscription = msg.payload
+        if subscription:
+            if subscription.addressDetails not in self.__queues:
+                self.__queues[subscription.addressDetails] = Queue(
                     maxsize=self.__default_q_size)
 
     def receiveMessage(self, msg, sender):
@@ -154,6 +158,8 @@ class MultiQPublisher(Publisher):
                 self.on_push(msg, sender)
             elif isinstance(msg, SetPublisher):
                 self.__publisher = msg.payload
+            elif isinstance(msg, SetSubscriber):
+                self.subscribe(msg, sender)
             elif isinstance(msg, SetDropPolicy):
                 self.set_drop_policy(msg, sender)(msg, sender)
         except Exception:
